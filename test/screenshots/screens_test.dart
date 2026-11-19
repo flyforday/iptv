@@ -1,0 +1,372 @@
+// Captures d'écran du design avec des données fictives (aucun réseau).
+//
+//   flutter test test/screenshots --update-goldens --run-skipped
+//
+// Les images sont écrites dans test/screenshots/out/.
+@Tags(['screenshots'])
+library;
+
+import 'dart:io';
+import 'dart:ui' as ui;
+
+import 'package:another_iptv_player/models/category.dart';
+import 'package:another_iptv_player/models/category_type.dart';
+import 'package:another_iptv_player/models/category_view_model.dart';
+import 'package:another_iptv_player/models/content_type.dart';
+import 'package:another_iptv_player/models/favorite.dart';
+import 'package:another_iptv_player/models/live_stream.dart';
+import 'package:another_iptv_player/models/playlist_content_model.dart';
+import 'package:another_iptv_player/models/playlist_model.dart';
+import 'package:another_iptv_player/models/series.dart';
+import 'package:another_iptv_player/models/vod_streams.dart';
+import 'package:another_iptv_player/models/watch_history.dart';
+import 'package:another_iptv_player/services/app_state.dart';
+import 'package:another_iptv_player/ui/home/catalog_view.dart';
+import 'package:another_iptv_player/ui/home/home_feed.dart';
+import 'package:another_iptv_player/ui/home/main_shell.dart';
+import 'package:another_iptv_player/ui/widgets/app_image.dart';
+import 'package:another_iptv_player/ui/widgets/poster_card.dart';
+import 'package:another_iptv_player/utils/app_themes.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_test/flutter_test.dart';
+
+const _imgDir = 'test/screenshots/images';
+final Map<String, ui.Image> _images = {};
+
+const _titles = [
+  'Marée Haute',
+  'Les Ombres du Nord',
+  'Néon',
+  'La Dernière Course',
+  'Horizon',
+  'Le Jardin Secret',
+  'Sous la Glace',
+  'Brûlant',
+  'Altitude',
+  'Minuit à Lisbonne',
+  'Les Gardiens',
+  'Cœur Sauvage',
+  'Orbite',
+  'La Promesse',
+  'Vertige',
+  'Écho',
+];
+
+const _channels = [
+  'Info 24',
+  'Sport+',
+  'Ciné Max',
+  'Kids',
+  'Doc',
+  'Musique',
+  'Nature',
+  'Cuisine',
+];
+
+String _poster(int i) => 'https://test/p${(i % 16).toString().padLeft(2, '0')}.jpg';
+String _logo(int i) => 'https://test/c${(i % 8).toString().padLeft(2, '0')}.png';
+
+Future<void> _loadFonts() async {
+  Future<void> load(String family, List<String> files) async {
+    final loader = FontLoader(family);
+    for (final f in files) {
+      final bytes = File(f).readAsBytesSync();
+      loader.addFont(Future.value(ByteData.view(bytes.buffer)));
+    }
+    await loader.load();
+  }
+
+  await load('Inter', [
+    for (final w in ['Regular', 'Medium', 'SemiBold', 'Bold', 'ExtraBold'])
+      'assets/fonts/Inter-$w.otf',
+  ]);
+  final flutterRoot = Platform.environment['FLUTTER_ROOT'] ?? '';
+  final icons = File(
+    '$flutterRoot/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf',
+  );
+  if (icons.existsSync()) await load('MaterialIcons', [icons.path]);
+}
+
+Future<void> _loadImages() async {
+  for (final f in Directory(_imgDir).listSync().whereType<File>()) {
+    final codec = await ui.instantiateImageCodec(f.readAsBytesSync());
+    final frame = await codec.getNextFrame();
+    _images['https://test/${f.uri.pathSegments.last}'] = frame.image;
+  }
+}
+
+ContentItem _movie(int i) => ContentItem(
+  'm$i',
+  _titles[i % 16],
+  _poster(i),
+  ContentType.vod,
+  containerExtension: 'mkv',
+  vodStream: VodStream(
+    streamId: 'm$i',
+    name: _titles[i % 16],
+    streamIcon: _poster(i),
+    categoryId: '1',
+    rating: '8',
+    rating5based: 4,
+    containerExtension: 'mkv',
+    createdAt: DateTime(2026),
+    genre: 'Aventure, Drame',
+  ),
+);
+
+ContentItem _series(int i) => ContentItem(
+  's$i',
+  _titles[i % 16],
+  _poster(i),
+  ContentType.series,
+  seriesStream: SeriesStream(
+    playlistId: 'demo',
+    seriesId: 's$i',
+    name: _titles[i % 16],
+    cover: _poster(i),
+    genre: 'Thriller',
+    releaseDate: '2025-03-01',
+  ),
+);
+
+ContentItem _channel(int i) => ContentItem(
+  'l$i',
+  _channels[i % 8],
+  _logo(i),
+  ContentType.liveStream,
+  liveStream: LiveStream(
+    streamId: 'l$i',
+    name: _channels[i % 8],
+    streamIcon: _logo(i),
+    categoryId: '1',
+    epgChannelId: '',
+  ),
+);
+
+CategoryViewModel _cat(String name, List<ContentItem> items, CategoryType t) =>
+    CategoryViewModel(
+      category: Category(
+        categoryId: name,
+        categoryName: name,
+        parentId: 0,
+        playlistId: 'demo',
+        type: t,
+      ),
+      contentItems: items,
+    );
+
+List<ContentItem> _range(ContentItem Function(int) f, int start, int n) => [
+  for (var i = start; i < start + n; i++) f(i),
+];
+
+HomeFeedData _homeData() {
+  final hero = ContentItem(
+    'm4',
+    'Horizon',
+    'https://test/backdrop.jpg',
+    ContentType.vod,
+    containerExtension: 'mkv',
+    vodStream: VodStream(
+      streamId: 'm4',
+      name: 'Horizon',
+      streamIcon: 'https://test/backdrop.jpg',
+      categoryId: '1',
+      rating: '8',
+      rating5based: 4,
+      containerExtension: 'mkv',
+      createdAt: DateTime(2026),
+      genre: 'Science-fiction, Aventure',
+    ),
+  );
+  WatchHistory h(int i, int watched, int total, ContentType t) => WatchHistory(
+    playlistId: 'demo',
+    contentType: t,
+    streamId: 'h$i',
+    watchDuration: Duration(minutes: watched),
+    totalDuration: Duration(minutes: total),
+    lastWatched: DateTime(2026),
+    imagePath: _poster(i),
+    title: t == ContentType.series ? '${_titles[i]} · S1 É3' : _titles[i],
+  );
+  return HomeFeedData(
+    hero: hero,
+    continueWatching: [
+      h(9, 52, 118, ContentType.vod),
+      h(1, 20, 45, ContentType.series),
+      h(12, 80, 96, ContentType.vod),
+    ],
+    favorites: [
+      for (final i in [5, 7, 13])
+        Favorite(
+          id: 'f$i',
+          playlistId: 'demo',
+          contentType: ContentType.vod,
+          streamId: 'm$i',
+          name: _titles[i],
+          imagePath: _poster(i),
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        ),
+    ],
+    topMovies: _range(_movie, 0, 8),
+    topSeries: _range(_series, 6, 8),
+    movieCategories: [
+      _cat('Nouveautés', _range(_movie, 3, 8), CategoryType.vod),
+      _cat('Comédie', _range(_movie, 10, 8), CategoryType.vod),
+    ],
+    seriesCategories: [
+      _cat('Séries policières', _range(_series, 2, 8), CategoryType.series),
+    ],
+  );
+}
+
+final _actions = HomeFeedActions(
+  openItem: (_) {},
+  playItem: (_) {},
+  resume: (_) {},
+  openFavorite: (_) {},
+  openCategory: (_) {},
+  toggleMyList: (_) {},
+);
+
+Widget _app(Brightness b, Widget home) => MaterialApp(
+  debugShowCheckedModeBanner: false,
+  theme: AppThemes.lightTheme,
+  darkTheme: AppThemes.darkTheme,
+  themeMode: b == Brightness.dark ? ThemeMode.dark : ThemeMode.light,
+  home: home,
+);
+
+Widget _shell({required int index, required double topInset}) => MainShell(
+  initialIndex: index,
+  profileInitial: 'L',
+  onSearch: () {},
+  onProfile: () {},
+  tabs: [
+    ShellTab(
+      label: 'Accueil',
+      icon: Icons.home_outlined,
+      selectedIcon: Icons.home_rounded,
+      overlayTopBar: true,
+      builder: (_) => HomeFeedView(
+        data: _homeData(),
+        actions: _actions,
+        topInset: topInset,
+      ),
+    ),
+    ShellTab(
+      label: 'Films',
+      icon: Icons.movie_outlined,
+      selectedIcon: Icons.movie_rounded,
+      builder: (_) => CatalogView(
+        categories: [
+          _cat('Nouveautés', _range(_movie, 0, 8), CategoryType.vod),
+          _cat('Action', _range(_movie, 4, 8), CategoryType.vod),
+          _cat('Comédie', _range(_movie, 8, 8), CategoryType.vod),
+          _cat('Famille', _range(_movie, 12, 8), CategoryType.vod),
+        ],
+        onOpen: (_) {},
+        onSeeAll: (_) {},
+      ),
+    ),
+    ShellTab(
+      label: 'Séries',
+      icon: Icons.video_library_outlined,
+      selectedIcon: Icons.video_library_rounded,
+      builder: (_) => const SizedBox(),
+    ),
+    ShellTab(
+      label: 'TV',
+      icon: Icons.live_tv_outlined,
+      selectedIcon: Icons.live_tv_rounded,
+      builder: (_) => CatalogView(
+        shape: PosterShape.channel,
+        categories: [
+          _cat('Généralistes', _range(_channel, 0, 8), CategoryType.live),
+          _cat('Sport', _range(_channel, 1, 8), CategoryType.live),
+          _cat('Jeunesse', _range(_channel, 3, 8), CategoryType.live),
+          _cat('Découverte', _range(_channel, 4, 8), CategoryType.live),
+          _cat('Musique', _range(_channel, 5, 8), CategoryType.live),
+        ],
+        onOpen: (_) {},
+        onSeeAll: (_) {},
+      ),
+    ),
+    ShellTab(
+      label: 'Ma liste',
+      icon: Icons.bookmark_border_rounded,
+      selectedIcon: Icons.bookmark_rounded,
+      builder: (_) => const SizedBox(),
+    ),
+  ],
+);
+
+class _Device {
+  final String name;
+  final Size size;
+  final double ratio;
+  final double topPadding;
+
+  const _Device(this.name, this.size, this.ratio, this.topPadding);
+}
+
+const _phone = _Device('phone', Size(393, 852), 3, 59);
+const _tablet = _Device('tablet', Size(1180, 820), 2, 24);
+
+void main() {
+  setUpAll(() async {
+    TestWidgetsFlutterBinding.ensureInitialized();
+    await _loadFonts();
+    AppState.currentPlaylist = Playlist(
+      id: 'demo',
+      name: 'Léo',
+      type: PlaylistType.xtream,
+      url: 'http://demo',
+      username: 'u',
+      password: 'p',
+      createdAt: DateTime(2026),
+    );
+    AppImage.debugBuilder = (context, url, fit, fallback) {
+      final img = _images[url];
+      if (img == null) return fallback(context);
+      return RawImage(image: img, fit: fit, width: double.infinity, height: double.infinity);
+    };
+  });
+
+  Future<void> shoot(
+    WidgetTester tester,
+    String name,
+    _Device d,
+    Brightness b,
+    Widget Function(double topInset) build,
+  ) async {
+    if (_images.isEmpty) await tester.runAsync(_loadImages);
+    tester.view.physicalSize = d.size * d.ratio;
+    tester.view.devicePixelRatio = d.ratio;
+    tester.view.padding = FakeViewPadding(top: d.topPadding * d.ratio);
+    tester.view.viewPadding = FakeViewPadding(top: d.topPadding * d.ratio);
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(_app(b, build(d.topPadding + 56)));
+    await tester.pump(const Duration(milliseconds: 300));
+    await expectLater(
+      find.byType(MaterialApp),
+      matchesGoldenFile('out/${name}_${d.name}_${b.name}.png'),
+    );
+  }
+
+  for (final b in Brightness.values) {
+    testWidgets('accueil ${b.name}', (t) async {
+      await shoot(t, 'accueil', _phone, b, (i) => _shell(index: 0, topInset: i));
+    });
+    testWidgets('films ${b.name}', (t) async {
+      await shoot(t, 'films', _phone, b, (i) => _shell(index: 1, topInset: i));
+    });
+    testWidgets('tv ${b.name}', (t) async {
+      await shoot(t, 'tv', _phone, b, (i) => _shell(index: 3, topInset: i));
+    });
+  }
+  testWidgets('accueil tablette', (t) async {
+    await shoot(t, 'accueil', _tablet, Brightness.dark, (i) => _shell(index: 0, topInset: i));
+  });
+}

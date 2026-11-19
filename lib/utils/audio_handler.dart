@@ -8,7 +8,7 @@ Future<MyAudioHandler> initAudioService() async {
     builder: () => MyAudioHandler(),
     config: const AudioServiceConfig(
       androidNotificationChannelId: 'dev.ogos.anotheriptvplayer',
-      androidNotificationChannelName: 'IPTV Famille',
+      androidNotificationChannelName: 'Famille TV',
       androidNotificationOngoing: false,
       androidShowNotificationBadge: true,
       androidStopForegroundOnPause: true,

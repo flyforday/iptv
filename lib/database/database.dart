@@ -1046,6 +1046,39 @@ class AppDatabase extends _$AppDatabase {
     return rows.map((row) => VodStream.fromDriftVodStream(row)).toList();
   }
 
+  /// Films les mieux notés ayant une affiche (accueil).
+  Future<List<VodStream>> getTopRatedVodStreams({
+    required String playlistId,
+    int limit = 20,
+  }) async {
+    final query = select(vodStreams)
+      ..where(
+        (vs) => vs.playlistId.equals(playlistId) & vs.streamIcon.isNotValue(''),
+      )
+      ..orderBy([(vs) => OrderingTerm.desc(vs.rating5based)])
+      ..limit(limit);
+    final rows = await query.get();
+    return rows.map((row) => VodStream.fromDriftVodStream(row)).toList();
+  }
+
+  /// Séries les mieux notées ayant une affiche (accueil).
+  Future<List<SeriesStream>> getTopRatedSeriesStreams({
+    required String playlistId,
+    int limit = 20,
+  }) async {
+    final query = select(seriesStreams)
+      ..where(
+        (ss) =>
+            ss.playlistId.equals(playlistId) &
+            ss.cover.isNotNull() &
+            ss.cover.isNotValue(''),
+      )
+      ..orderBy([(ss) => OrderingTerm.desc(ss.rating5based)])
+      ..limit(limit);
+    final rows = await query.get();
+    return rows.map((row) => SeriesStream.fromDriftSeriesStream(row)).toList();
+  }
+
   Future<List<VodStream>> getVodStreamsByCategory(String categoryId) async {
     final rows = await (select(
       vodStreams,

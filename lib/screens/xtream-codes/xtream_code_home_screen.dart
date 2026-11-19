@@ -1,5 +1,3 @@
-import 'package:another_iptv_player/l10n/localization_extension.dart';
-import 'package:another_iptv_player/screens/search_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:another_iptv_player/controllers/xtream_code_home_controller.dart';
@@ -12,9 +10,12 @@ import 'package:another_iptv_player/screens/xtream-codes/xtream_code_playlist_se
 import 'package:another_iptv_player/screens/watch_history_screen.dart';
 import 'package:another_iptv_player/services/app_state.dart';
 import 'package:another_iptv_player/utils/navigate_by_content_type.dart';
-import 'package:another_iptv_player/utils/responsive_helper.dart';
-import 'package:another_iptv_player/widgets/category_section.dart';
-import '../../models/content_type.dart';
+
+import '../../ui/home/catalog_view.dart';
+import '../../ui/home/main_shell.dart';
+import '../../ui/home/xtream_home_tab.dart';
+import '../../ui/search/unified_search_screen.dart';
+import '../../ui/widgets/poster_card.dart';
 
 class XtreamCodeHomeScreen extends StatefulWidget {
   final Playlist playlist;
@@ -27,32 +28,10 @@ class XtreamCodeHomeScreen extends StatefulWidget {
 
 class _XtreamCodeHomeScreenState extends State<XtreamCodeHomeScreen> {
   late XtreamCodeHomeController _controller;
-  static const double _desktopBreakpoint = 900.0;
-  static const double _largeScreenBreakpoint = 1200.0;
-  static const double _defaultNavWidth = 80.0;
-  static const double _largeNavWidth = 100.0;
-  static const double _defaultItemHeight = 60.0;
-  static const double _largeItemHeight = 70.0;
-  static const double _defaultIconSize = 24.0;
-  static const double _largeIconSize = 28.0;
-  static const double _defaultFontSize = 10.0;
-  static const double _largeFontSize = 11.0;
-  int? _hoveredIndex;
-  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    _initializeController();
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  void _initializeController() {
     final repository = IptvRepository(
       ApiConfig(
         baseUrl: widget.playlist.url!,
@@ -66,215 +45,12 @@ class _XtreamCodeHomeScreenState extends State<XtreamCodeHomeScreen> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      value: _controller,
-      child: Consumer<XtreamCodeHomeController>(
-        builder: (context, controller, child) =>
-            _buildMainContent(context, controller),
-      ),
-    );
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
-  Widget _buildMainContent(
-    BuildContext context,
-    XtreamCodeHomeController controller,
-  ) {
-    if (controller.isLoading) {
-      return _buildLoadingScreen(context);
-    }
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        if (constraints.maxWidth >= _desktopBreakpoint) {
-          return _buildDesktopLayout(context, controller, constraints);
-        }
-        return _buildMobileLayout(context, controller);
-      },
-    );
-  }
-
-  Widget _buildLoadingScreen(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            Text(context.loc.loading_playlists),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildMobileLayout(
-    BuildContext context,
-    XtreamCodeHomeController controller,
-  ) {
-    return Scaffold(
-      body: _buildPageView(controller),
-      bottomNavigationBar: _buildBottomNavigationBar(context, controller),
-    );
-  }
-
-  Widget _buildDesktopLayout(
-    BuildContext context,
-    XtreamCodeHomeController controller,
-    BoxConstraints constraints,
-  ) {
-    return Scaffold(
-      body: Row(
-        children: [
-          _buildDesktopNavigationBar(context, controller, constraints),
-          Expanded(child: _buildPageView(controller)),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPageView(XtreamCodeHomeController controller) {
-    return IndexedStack(
-      index: controller.currentIndex,
-      children: _buildPages(controller),
-    );
-  }
-
-  List<Widget> _buildPages(XtreamCodeHomeController controller) {
-    return [
-      WatchHistoryScreen(
-        key: ValueKey('watch_history_${controller.currentIndex}'),
-        playlistId: widget.playlist.id,
-      ),
-      _buildContentPage(
-        controller.liveCategories!,
-        ContentType.liveStream,
-        controller,
-      ),
-      _buildContentPage(
-        controller.movieCategories,
-        ContentType.vod,
-        controller,
-      ),
-      _buildContentPage(
-        controller.seriesCategories,
-        ContentType.series,
-        controller,
-      ),
-      XtreamCodePlaylistSettingsScreen(playlist: widget.playlist),
-    ];
-  }
-
-  Widget _buildContentPage(
-    List<CategoryViewModel> categories,
-    ContentType contentType,
-    XtreamCodeHomeController controller,
-  ) {
-    return Scaffold(
-      appBar: _buildAppBar(context, controller, contentType),
-      body: _buildCategoryList(categories, contentType),
-    );
-  }
-
-  AppBar _buildAppBar(
-    BuildContext context,
-    XtreamCodeHomeController controller,
-    ContentType contentType,
-  ) {
-    if (ResponsiveHelper.isDesktopOrTV(context)) {
-      return _buildDesktopAppBar(context, contentType);
-    }
-    return _buildMobileAppBar(context, controller, contentType);
-  }
-
-  AppBar _buildDesktopAppBar(BuildContext context, ContentType contentType) {
-    return AppBar(
-      title: SelectableText(
-        _getDesktopTitle(context, contentType),
-        style: const TextStyle(fontWeight: FontWeight.bold),
-      ),
-      elevation: 0,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.search),
-          onPressed: () => _navigateToSearch(context, contentType),
-        ),
-      ],
-    );
-  }
-
-  String _getDesktopTitle(BuildContext context, ContentType contentType) {
-    switch (contentType) {
-      case ContentType.liveStream:
-        return context.loc.live_streams;
-      case ContentType.vod:
-        return context.loc.movies;
-      case ContentType.series:
-        return context.loc.series_plural;
-    }
-  }
-
-  AppBar _buildMobileAppBar(
-    BuildContext context,
-    XtreamCodeHomeController controller,
-    ContentType contentType,
-  ) {
-    return AppBar(
-      title: SelectableText(
-        controller.getPageTitle(context),
-        style: const TextStyle(fontWeight: FontWeight.bold),
-      ),
-      elevation: 0,
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.search),
-          onPressed: () => _navigateToSearch(context, contentType),
-        ),
-      ],
-    );
-  }
-
-  void _navigateToSearch(BuildContext context, ContentType contentType) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SearchScreen(contentType: contentType),
-      ),
-    );
-  }
-
-  Widget _buildCategoryList(
-    List<CategoryViewModel> categories,
-    ContentType contentType,
-  ) {
-    return Scrollbar(
-      controller: _scrollController,
-      interactive: true,
-      child: ListView.builder(
-        controller: _scrollController,
-        shrinkWrap: true,
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: categories.length,
-        itemBuilder: (context, index) =>
-            _buildCategorySection(categories[index], contentType),
-      ),
-    );
-  }
-
-  Widget _buildCategorySection(
-    CategoryViewModel category,
-    ContentType contentType,
-  ) {
-    return CategorySection(
-      category: category,
-      cardWidth: ResponsiveHelper.getCardWidth(context),
-      cardHeight: ResponsiveHelper.getCardHeight(context),
-      onSeeAllTap: () => _navigateToCategoryDetail(category),
-      onContentTap: (content) => navigateByContentType(context, content),
-    );
-  }
-
-  void _navigateToCategoryDetail(CategoryViewModel category) {
+  void _openCategory(CategoryViewModel category) {
     Navigator.push(
       context,
       MaterialPageRoute(
@@ -283,193 +59,79 @@ class _XtreamCodeHomeScreenState extends State<XtreamCodeHomeScreen> {
     );
   }
 
-  BottomNavigationBar _buildBottomNavigationBar(
-    BuildContext context,
-    XtreamCodeHomeController controller,
-  ) {
-    return BottomNavigationBar(
-      currentIndex: controller.currentIndex,
-      onTap: controller.onNavigationTap,
-      type: BottomNavigationBarType.fixed,
-      items: _buildBottomNavigationItems(context),
-    );
-  }
-
-  List<BottomNavigationBarItem> _buildBottomNavigationItems(
-    BuildContext context,
-  ) {
-    return _getNavigationItems(context).map((item) {
-      return BottomNavigationBarItem(icon: Icon(item.icon), label: item.label);
-    }).toList();
-  }
-
-  Widget _buildDesktopNavigationBar(
-    BuildContext context,
-    XtreamCodeHomeController controller,
-    BoxConstraints constraints,
-  ) {
-    final navWidth = _getNavigationWidth(constraints.maxWidth);
-    return Container(
-      width: navWidth,
-      decoration: _getNavigationBarDecoration(context),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          _buildDesktopNavigationItems(context, controller, constraints),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDesktopNavigationItems(
-    BuildContext context,
-    XtreamCodeHomeController controller,
-    BoxConstraints constraints,
-  ) {
-    final items = _getNavigationItems(context);
-    final sizes = _getNavigationSizes(constraints.maxWidth);
-    return Column(
-      children: items.map((item) {
-        final isSelected = controller.currentIndex == item.index;
-        return _buildNavigationItem(
-          context,
-          item,
-          isSelected,
-          sizes,
-          () => controller.onNavigationTap(item.index),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildNavigationItem(
-    BuildContext context,
-    NavigationItem item,
-    bool isSelected,
-    NavigationSizes sizes,
-    VoidCallback onTap,
-  ) {
-    return Focus(
-      onFocusChange: (hasFocus) {
-        setState(() => _hoveredIndex = hasFocus ? item.index : null);
-      },
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          width: double.infinity,
-          height: sizes.itemHeight,
-          margin: const EdgeInsets.symmetric(vertical: 2),
-          decoration: BoxDecoration(
-            color: isSelected
-                ? Theme.of(context).colorScheme.primaryContainer
-                : (_hoveredIndex == item.index
-                      ? Colors.grey.withOpacity(0.2)
-                      : Colors.transparent),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                item.icon,
-                color: _getIconColor(context, isSelected),
-                size: sizes.iconSize,
+  @override
+  Widget build(BuildContext context) {
+    return ChangeNotifierProvider.value(
+      value: _controller,
+      child: Consumer<XtreamCodeHomeController>(
+        builder: (context, controller, _) {
+          final name = widget.playlist.name.trim();
+          return MainShell(
+            profileInitial: name.isEmpty ? '' : name[0].toUpperCase(),
+            onSearch: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const UnifiedSearchScreen()),
+            ),
+            onProfile: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    XtreamCodePlaylistSettingsScreen(playlist: widget.playlist),
               ),
-              const SizedBox(height: 2),
-              Text(
-                item.label,
-                style: TextStyle(
-                  color: _getTextColor(context, isSelected),
-                  fontSize: sizes.fontSize,
-                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+            tabs: [
+              ShellTab(
+                label: 'Accueil',
+                icon: Icons.home_outlined,
+                selectedIcon: Icons.home_rounded,
+                overlayTopBar: true,
+                builder: (_) => XtreamHomeTab(
+                  movieCategories: controller.movieCategories,
+                  seriesCategories: controller.seriesCategories,
                 ),
-                textAlign: TextAlign.center,
+              ),
+              ShellTab(
+                label: 'Films',
+                icon: Icons.movie_outlined,
+                selectedIcon: Icons.movie_rounded,
+                builder: (context) => CatalogView(
+                  categories: controller.movieCategories,
+                  onOpen: (item) => navigateByContentType(context, item),
+                  onSeeAll: _openCategory,
+                ),
+              ),
+              ShellTab(
+                label: 'Séries',
+                icon: Icons.video_library_outlined,
+                selectedIcon: Icons.video_library_rounded,
+                builder: (context) => CatalogView(
+                  categories: controller.seriesCategories,
+                  onOpen: (item) => navigateByContentType(context, item),
+                  onSeeAll: _openCategory,
+                ),
+              ),
+              ShellTab(
+                label: 'TV',
+                icon: Icons.live_tv_outlined,
+                selectedIcon: Icons.live_tv_rounded,
+                builder: (context) => CatalogView(
+                  categories: controller.liveCategories ?? const [],
+                  shape: PosterShape.channel,
+                  onOpen: (item) => navigateByContentType(context, item),
+                  onSeeAll: _openCategory,
+                ),
+              ),
+              ShellTab(
+                label: 'Ma liste',
+                icon: Icons.bookmark_border_rounded,
+                selectedIcon: Icons.bookmark_rounded,
+                builder: (_) =>
+                    WatchHistoryScreen(playlistId: widget.playlist.id),
               ),
             ],
-          ),
-        ),
+          );
+        },
       ),
     );
   }
-
-  BoxDecoration _getNavigationBarDecoration(BuildContext context) {
-    return BoxDecoration(
-      color: Theme.of(context).colorScheme.surface,
-      border: Border(
-        right: BorderSide(color: Theme.of(context).dividerColor, width: 0.5),
-      ),
-    );
-  }
-
-  double _getNavigationWidth(double screenWidth) {
-    return screenWidth >= _largeScreenBreakpoint
-        ? _largeNavWidth
-        : _defaultNavWidth;
-  }
-
-  NavigationSizes _getNavigationSizes(double screenWidth) {
-    final isLargeScreen = screenWidth >= _largeScreenBreakpoint;
-    return NavigationSizes(
-      itemHeight: isLargeScreen ? _largeItemHeight : _defaultItemHeight,
-      iconSize: isLargeScreen ? _largeIconSize : _defaultIconSize,
-      fontSize: isLargeScreen ? _largeFontSize : _defaultFontSize,
-    );
-  }
-
-  Color _getIconColor(BuildContext context, bool isSelected) {
-    return isSelected
-        ? Theme.of(context).colorScheme.primary
-        : Theme.of(context).colorScheme.onSurface;
-  }
-
-  Color _getTextColor(BuildContext context, bool isSelected) {
-    return isSelected
-        ? Theme.of(context).colorScheme.primary
-        : Theme.of(context).colorScheme.onSurface;
-  }
-
-  List<NavigationItem> _getNavigationItems(BuildContext context) {
-    return [
-      NavigationItem(icon: Icons.history, label: context.loc.history, index: 0),
-      NavigationItem(icon: Icons.live_tv, label: context.loc.live, index: 1),
-      NavigationItem(
-        icon: Icons.movie_outlined,
-        label: context.loc.movie,
-        index: 2,
-      ),
-      NavigationItem(
-        icon: Icons.tv,
-        label: context.loc.series_plural,
-        index: 3,
-      ),
-      NavigationItem(
-        icon: Icons.settings,
-        label: context.loc.settings,
-        index: 4,
-      ),
-    ];
-  }
-}
-
-class NavigationItem {
-  final IconData icon;
-  final String label;
-  final int index;
-
-  const NavigationItem({
-    required this.icon,
-    required this.label,
-    required this.index,
-  });
-}
-
-class NavigationSizes {
-  final double itemHeight;
-  final double iconSize;
-  final double fontSize;
-
-  const NavigationSizes({
-    required this.itemHeight,
-    required this.iconSize,
-    required this.fontSize,
-  });
 }

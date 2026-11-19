@@ -52,12 +52,12 @@ jobs:
 
       - run: flutter build apk --release --build-number=${{ github.run_number }}
 
-      - run: mv build/app/outputs/flutter-apk/app-release.apk IPTV-Famille.apk
+      - run: mv build/app/outputs/flutter-apk/app-release.apk FamilleTV.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: android
-          path: IPTV-Famille.apk
+          path: FamilleTV.apk
 
   ios:
     if: github.event_name != 'pull_request'
@@ -82,12 +82,12 @@ jobs:
         run: |
           mkdir Payload
           cp -R build/ios/iphoneos/Runner.app Payload/
-          zip -qr IPTV-Famille.ipa Payload
+          zip -qr FamilleTV.ipa Payload
 
       - uses: actions/upload-artifact@v4
         with:
           name: ios
-          path: IPTV-Famille.ipa
+          path: FamilleTV.ipa
 
   release:
     needs: [android, ios]
@@ -103,9 +103,9 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
-          name: IPTV Famille ${{ github.run_number }}
+          name: Famille TV ${{ github.run_number }}
           make_latest: true
           files: |
-            IPTV-Famille.apk
-            IPTV-Famille.ipa
+            FamilleTV.apk
+            FamilleTV.ipa
           fail_on_unmatched_files: false

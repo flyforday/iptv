@@ -113,7 +113,7 @@ class XtreamCodeHomeController extends ChangeNotifier {
       case 4:
         return context.loc.settings;
       default:
-        return 'IPTV Famille';
+        return 'Famille TV';
     }
   }
 

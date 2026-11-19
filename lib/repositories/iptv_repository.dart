@@ -233,6 +233,12 @@ class IptvRepository {
     }
   }
 
+  Future<List<VodStream>> getTopRatedMovies({int limit = 20}) =>
+      _database.getTopRatedVodStreams(playlistId: _playlistId, limit: limit);
+
+  Future<List<SeriesStream>> getTopRatedSeries({int limit = 20}) =>
+      _database.getTopRatedSeriesStreams(playlistId: _playlistId, limit: limit);
+
   Future<List<SeriesStream>?> getSeriesFromApi({
     String? categoryId,
     bool forceRefresh = false,

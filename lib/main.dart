@@ -9,6 +9,7 @@ import 'controllers/theme_provider.dart';
 import 'l10n/app_localizations.dart';
 import 'l10n/supported_languages.dart';
 import 'utils/app_themes.dart';
+import 'ui/app_routes.dart';
 
 Future<void> main() async {
   await setupServiceLocator();
@@ -42,11 +43,12 @@ class MyApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
-      title: 'IPTV Famille',
+      title: 'Famille TV',
       theme: AppThemes.lightTheme,
       darkTheme: AppThemes.darkTheme,
       themeMode: themeProvider.themeMode,
       home: AppInitializerScreen(),
+      navigatorObservers: [appRouteObserver],
       debugShowCheckedModeBanner: false,
     );
   }

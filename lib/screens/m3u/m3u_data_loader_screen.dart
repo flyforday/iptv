@@ -212,7 +212,7 @@ class M3uDataLoaderScreenState extends State<M3uDataLoaderScreen>
                           ),
                           SizedBox(height: 24),
                           Text(
-                            'IPTV Famille',
+                            'Famille TV',
                             style: TextStyle(
                               fontSize: 32,
                               fontWeight: FontWeight.w300,
