@@ -7,12 +7,12 @@ import 'package:another_iptv_player/models/playlist_model.dart';
 import 'package:another_iptv_player/repositories/iptv_repository.dart';
 import 'package:another_iptv_player/screens/category_detail_screen.dart';
 import 'package:another_iptv_player/screens/xtream-codes/xtream_code_playlist_settings_screen.dart';
-import 'package:another_iptv_player/screens/watch_history_screen.dart';
 import 'package:another_iptv_player/services/app_state.dart';
 import 'package:another_iptv_player/utils/navigate_by_content_type.dart';
 
 import '../../ui/home/catalog_view.dart';
 import '../../ui/home/main_shell.dart';
+import '../../ui/home/my_list_tab.dart';
 import '../../ui/home/xtream_home_tab.dart';
 import '../../ui/profiles/profile_menu.dart';
 import '../../ui/profiles/profiles_view.dart';
@@ -134,8 +134,7 @@ class _XtreamCodeHomeScreenState extends State<XtreamCodeHomeScreen> {
                 label: 'Ma liste',
                 icon: Icons.bookmark_border_rounded,
                 selectedIcon: Icons.bookmark_rounded,
-                builder: (_) =>
-                    WatchHistoryScreen(playlistId: widget.playlist.id),
+                builder: (_) => const MyListTab(),
               ),
             ],
           );

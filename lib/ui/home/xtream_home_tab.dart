@@ -11,6 +11,7 @@ import '../../screens/category_detail_screen.dart';
 import '../../screens/movies/movie_screen.dart';
 import '../../services/app_state.dart';
 import '../../services/watch_history_service.dart';
+import '../../utils/get_playlist_type.dart';
 import '../../utils/navigate_by_content_type.dart';
 import '../app_routes.dart';
 import 'home_feed.dart';
@@ -71,15 +72,16 @@ class _XtreamHomeTabState extends State<XtreamHomeTab> with RouteAware {
   void didPopNext() => _load();
 
   Future<void> _load() async {
-    final repo = AppState.xtreamCodeRepository;
     final playlist = AppState.currentPlaylist;
-    if (repo == null || playlist == null) return;
+    if (playlist == null) return;
+    // Les comptes M3U n'ont pas de notes : pas de rangées « mieux notés ».
+    final repo = isXtreamCode ? AppState.xtreamCodeRepository : null;
 
-    final results = await Future.wait([
+    final results = await Future.wait<List<dynamic>>([
       _history.getContinueWatching(playlist.id),
       _favorites.getAllFavorites(),
-      repo.getTopRatedMovies(),
-      repo.getTopRatedSeries(),
+      repo?.getTopRatedMovies() ?? Future.value(const []),
+      repo?.getTopRatedSeries() ?? Future.value(const []),
     ]);
 
     final continueWatching = (results[0] as List<WatchHistory>)
