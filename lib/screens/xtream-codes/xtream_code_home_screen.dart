@@ -14,6 +14,8 @@ import 'package:another_iptv_player/utils/navigate_by_content_type.dart';
 import '../../ui/home/catalog_view.dart';
 import '../../ui/home/main_shell.dart';
 import '../../ui/home/xtream_home_tab.dart';
+import '../../ui/profiles/profile_menu.dart';
+import '../../ui/profiles/profiles_view.dart';
 import '../../ui/search/unified_search_screen.dart';
 import '../../ui/widgets/poster_card.dart';
 
@@ -68,15 +70,22 @@ class _XtreamCodeHomeScreenState extends State<XtreamCodeHomeScreen> {
           final name = widget.playlist.name.trim();
           return MainShell(
             profileInitial: name.isEmpty ? '' : name[0].toUpperCase(),
+            profileColor: ProfilesView.colorFor(widget.playlist.id),
             onSearch: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const UnifiedSearchScreen()),
             ),
-            onProfile: () => Navigator.push(
+            onProfile: () => showProfileMenu(
               context,
-              MaterialPageRoute(
-                builder: (_) =>
-                    XtreamCodePlaylistSettingsScreen(playlist: widget.playlist),
+              profileId: widget.playlist.id,
+              profileName: widget.playlist.name,
+              onSettings: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => XtreamCodePlaylistSettingsScreen(
+                    playlist: widget.playlist,
+                  ),
+                ),
               ),
             ),
             tabs: [

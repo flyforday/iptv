@@ -30,7 +30,13 @@ import 'package:another_iptv_player/ui/home/main_shell.dart';
 import 'package:another_iptv_player/ui/widgets/app_image.dart';
 import 'package:another_iptv_player/ui/widgets/poster_card.dart';
 import 'package:another_iptv_player/utils/app_themes.dart';
+import 'package:another_iptv_player/controllers/playlist_controller.dart';
+import 'package:another_iptv_player/l10n/app_localizations.dart';
+import 'package:another_iptv_player/ui/profiles/add_profile_screen.dart';
+import 'package:another_iptv_player/ui/profiles/profiles_view.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -235,6 +241,14 @@ final _actions = HomeFeedActions(
 
 Widget _app(Brightness b, Widget home) => MaterialApp(
   debugShowCheckedModeBanner: false,
+  locale: const Locale('fr'),
+  supportedLocales: const [Locale('fr'), Locale('en')],
+  localizationsDelegates: const [
+    AppLocalizations.delegate,
+    GlobalMaterialLocalizations.delegate,
+    GlobalWidgetsLocalizations.delegate,
+    GlobalCupertinoLocalizations.delegate,
+  ],
   theme: AppThemes.lightTheme,
   darkTheme: AppThemes.darkTheme,
   themeMode: b == Brightness.dark ? ThemeMode.dark : ThemeMode.light,
@@ -445,6 +459,26 @@ void main() {
   testWidgets('film tablette', (t) async {
     await shoot(t, 'film', _tablet, Brightness.dark, (_) => _movieDetail());
   });
+  for (final b in Brightness.values) {
+    testWidgets('profils ${b.name}', (t) async {
+      await shoot(t, 'profils', _phone, b, (_) => ProfilesView(
+        profiles: const [
+          ProfileEntry(id: 'a', name: 'Léo', subtitle: 'Codes Xtream'),
+          ProfileEntry(id: 'b', name: 'Maman', subtitle: 'Codes Xtream'),
+          ProfileEntry(id: 'c', name: 'Papa', subtitle: 'Lien M3U'),
+        ],
+        onOpen: (_) {},
+        onAdd: () {},
+        onDelete: (_) {},
+      ));
+    });
+    testWidgets('xtream ${b.name}', (t) async {
+      await shoot(t, 'ajout_profil', _phone, b, (_) => ChangeNotifierProvider(
+        create: (_) => PlaylistController(),
+        child: const AddProfileScreen(),
+      ));
+    });
+  }
   testWidgets('accueil tablette', (t) async {
     await shoot(t, 'accueil', _tablet, Brightness.dark, (i) => _shell(index: 0, topInset: i));
   });

@@ -28,6 +28,7 @@ class MainShell extends StatefulWidget {
   final VoidCallback onSearch;
   final VoidCallback onProfile;
   final String profileInitial;
+  final Color profileColor;
   final int initialIndex;
 
   const MainShell({
@@ -36,6 +37,7 @@ class MainShell extends StatefulWidget {
     required this.onSearch,
     required this.onProfile,
     this.profileInitial = '',
+    this.profileColor = AppColors.pink,
     this.initialIndex = 0,
   });
 
@@ -68,6 +70,7 @@ class _MainShellState extends State<MainShell> {
                     onSearch: widget.onSearch,
                     onProfile: widget.onProfile,
                     profileInitial: widget.profileInitial,
+                    profileColor: widget.profileColor,
                   ),
                 )
               : const SizedBox.shrink(),
@@ -151,6 +154,7 @@ class _TopBar extends StatelessWidget {
   final VoidCallback onSearch;
   final VoidCallback onProfile;
   final String profileInitial;
+  final Color profileColor;
 
   const _TopBar({
     required this.title,
@@ -158,6 +162,7 @@ class _TopBar extends StatelessWidget {
     required this.onSearch,
     required this.onProfile,
     required this.profileInitial,
+    required this.profileColor,
   });
 
   @override
@@ -200,7 +205,7 @@ class _TopBar extends StatelessWidget {
                       height: 30,
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
-                        color: AppColors.pink,
+                        color: profileColor,
                         borderRadius: BorderRadius.circular(7),
                       ),
                       child: profileInitial.isEmpty

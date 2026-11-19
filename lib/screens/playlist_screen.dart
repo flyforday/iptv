@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../controllers/playlist_controller.dart';
 import '../../models/playlist_model.dart';
-import '../../widgets/playlist_card.dart';
 import '../../widgets/playlist_states.dart';
-import 'playlist_type_screen.dart';
+import '../ui/profiles/add_profile_screen.dart';
+import '../ui/profiles/profiles_view.dart';
 
 class PlaylistScreen extends StatefulWidget {
   const PlaylistScreen({super.key});
@@ -31,13 +31,35 @@ class _PlaylistScreenBody extends StatelessWidget {
       _initializePlaylistsIfNeeded(context);
     });
 
-    return Scaffold(
-      appBar: _buildAppBar(context),
-      body: Consumer<PlaylistController>(
-        builder: (context, controller, child) =>
-            _buildBodyFromState(context, controller),
-      ),
-      floatingActionButton: _buildFloatingActionButton(context),
+    return Consumer<PlaylistController>(
+      builder: (context, controller, child) {
+        if (controller.isLoading) {
+          return const Scaffold(body: PlaylistLoadingState());
+        }
+        if (controller.error != null) {
+          return Scaffold(
+            body: PlaylistErrorState(
+              error: controller.error!,
+              onRetry: () => controller.loadPlaylists(context),
+            ),
+          );
+        }
+        final byId = {for (final p in controller.playlists) p.id: p};
+        return ProfilesView(
+          profiles: [
+            for (final p in controller.playlists)
+              ProfileEntry(
+                id: p.id,
+                name: p.name,
+                subtitle: p.type == PlaylistType.xtream ? 'Codes Xtream' : 'Lien M3U',
+              ),
+          ],
+          onOpen: (entry) => controller.openPlaylist(context, byId[entry.id]!),
+          onAdd: () => _navigateToCreatePlaylist(context),
+          onDelete: (entry) =>
+              _showDeleteDialog(context, controller, byId[entry.id]!),
+        );
+      },
     );
   }
 
@@ -50,76 +72,10 @@ class _PlaylistScreenBody extends StatelessWidget {
     }
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context) {
-    return AppBar(
-      title: Text(
-        context.loc.my_playlists,
-        style: TextStyle(fontWeight: FontWeight.bold),
-      ),
-    );
-  }
-
-  Widget _buildBodyFromState(
-    BuildContext context,
-    PlaylistController controller,
-  ) {
-    if (controller.isLoading) {
-      return const PlaylistLoadingState();
-    }
-
-    if (controller.error != null) {
-      return PlaylistErrorState(
-        error: controller.error!,
-        onRetry: () => controller.loadPlaylists(context),
-      );
-    }
-
-    if (controller.playlists.isEmpty) {
-      return PlaylistEmptyState(
-        onCreatePlaylist: () => _navigateToCreatePlaylist(context),
-      );
-    }
-
-    return _buildPlaylistList(context, controller);
-  }
-
-  Widget _buildPlaylistList(
-    BuildContext context,
-    PlaylistController controller,
-  ) {
-    return RefreshIndicator(
-      onRefresh: () => controller.loadPlaylists(context),
-      child: ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: controller.playlists.length,
-        itemBuilder: (context, index) {
-          return PlaylistCard(
-            playlist: controller.playlists[index],
-            onTap: () =>
-                controller.openPlaylist(context, controller.playlists[index]),
-            onDelete: () => _showDeleteDialog(
-              context,
-              controller,
-              controller.playlists[index],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildFloatingActionButton(BuildContext context) {
-    return FloatingActionButton(
-      onPressed: () => _navigateToCreatePlaylist(context),
-      tooltip: context.loc.create_new_playlist,
-      child: const Icon(Icons.add, color: Colors.white),
-    );
-  }
-
   void _navigateToCreatePlaylist(BuildContext context) {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const PlaylistTypeScreen()),
+      MaterialPageRoute(builder: (context) => const AddProfileScreen()),
     );
   }
 
@@ -146,7 +102,6 @@ class _PlaylistScreenBody extends StatelessWidget {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(context.loc.playlist_deleted(playlistName)),
-        backgroundColor: Colors.green,
       ),
     );
   }
