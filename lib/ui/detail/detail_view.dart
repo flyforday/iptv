@@ -253,9 +253,12 @@ class _TabletHeader extends StatelessWidget {
               SizedBox(width: 210, height: 315, child: _PosterBox(view: view)),
               const SizedBox(width: 28),
               Expanded(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 560),
-                  child: info,
+                child: Align(
+                  alignment: Alignment.bottomLeft,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 520),
+                    child: info,
+                  ),
                 ),
               ),
             ],

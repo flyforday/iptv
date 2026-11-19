@@ -27,6 +27,7 @@ import 'package:another_iptv_player/ui/home/catalog_view.dart';
 import 'package:another_iptv_player/ui/widgets/media_row.dart';
 import 'package:another_iptv_player/ui/home/home_feed.dart';
 import 'package:another_iptv_player/ui/home/main_shell.dart';
+import 'package:another_iptv_player/ui/home/my_list_tab.dart';
 import 'package:another_iptv_player/ui/widgets/app_image.dart';
 import 'package:another_iptv_player/ui/widgets/poster_card.dart';
 import 'package:another_iptv_player/utils/app_themes.dart';
@@ -314,7 +315,39 @@ Widget _shell({required int index, required double topInset}) => MainShell(
       label: 'Ma liste',
       icon: Icons.bookmark_border_rounded,
       selectedIcon: Icons.bookmark_rounded,
-      builder: (_) => const SizedBox(),
+      builder: (_) => MyListView(
+        data: MyListData(
+          favorites: [
+            for (final i in [5, 7, 13, 2, 10, 15])
+              Favorite(
+                id: 'f$i',
+                playlistId: 'demo',
+                contentType: ContentType.vod,
+                streamId: 'm$i',
+                name: _titles[i],
+                imagePath: _poster(i),
+                createdAt: DateTime(2026),
+                updatedAt: DateTime(2026),
+              ),
+            for (final i in [0, 3, 5])
+              Favorite(
+                id: 'c$i',
+                playlistId: 'demo',
+                contentType: ContentType.liveStream,
+                streamId: 'l$i',
+                name: _channels[i],
+                imagePath: _logo(i),
+                createdAt: DateTime(2026),
+                updatedAt: DateTime(2026),
+              ),
+          ],
+          history: _homeData().continueWatching,
+        ),
+        onOpenFavorite: (_) {},
+        onRemoveFavorite: (_) {},
+        onResume: (_) {},
+        onRemoveHistory: (_) {},
+      ),
     ),
   ],
 );
@@ -443,6 +476,9 @@ void main() {
     });
     testWidgets('films ${b.name}', (t) async {
       await shoot(t, 'films', _phone, b, (i) => _shell(index: 1, topInset: i));
+    });
+    testWidgets('maliste ${b.name}', (t) async {
+      await shoot(t, 'maliste', _phone, b, (i) => _shell(index: 4, topInset: i));
     });
     testWidgets('tv ${b.name}', (t) async {
       await shoot(t, 'tv', _phone, b, (i) => _shell(index: 3, topInset: i));

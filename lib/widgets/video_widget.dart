@@ -7,6 +7,7 @@ import 'package:another_iptv_player/widgets/player-buttons/video_info_widget.dar
 import 'package:another_iptv_player/widgets/player-buttons/video_settings_widget.dart';
 import 'package:another_iptv_player/widgets/player-buttons/video_title_widget.dart';
 import 'package:flutter/material.dart';
+import '../utils/app_themes.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 
 class VideoWidget extends StatefulWidget {
@@ -55,6 +56,33 @@ class _VideoWidgetState extends State<VideoWidget> {
     }
   }
 
+  /// Boutons du centre : -10 s, lecture/pause, +10 s.
+  List<Widget> _primaryButtons() {
+    Future<void> jump(int seconds) async {
+      final player = widget.controller.player;
+      final target = player.state.position + Duration(seconds: seconds);
+      await player.seek(target < Duration.zero ? Duration.zero : target);
+    }
+
+    return [
+      const Spacer(flex: 2),
+      MaterialCustomButton(
+        icon: const Icon(Icons.replay_10_rounded),
+        iconSize: 36,
+        onPressed: () => jump(-10),
+      ),
+      const Spacer(),
+      const MaterialPlayOrPauseButton(iconSize: 56),
+      const Spacer(),
+      MaterialCustomButton(
+        icon: const Icon(Icons.forward_10_rounded),
+        iconSize: 36,
+        onPressed: () => jump(10),
+      ),
+      const Spacer(flex: 2),
+    ];
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -71,6 +99,11 @@ class _VideoWidgetState extends State<VideoWidget> {
             seekGesture: _seekGesture,
             speedUpOnLongPress: _speedUpOnLongPress,
             seekOnDoubleTap: _seekOnDoubleTap,
+            seekBarPositionColor: AppColors.pink,
+            seekBarThumbColor: AppColors.pink,
+            seekBarThumbSize: 14,
+            buttonBarButtonColor: Colors.white,
+            primaryButtonBar: _primaryButtons(),
             topButtonBar: [
             BackButtonWidget(),
             Expanded(child: VideoTitleWidget()),
@@ -90,6 +123,11 @@ class _VideoWidgetState extends State<VideoWidget> {
           seekGesture: _seekGesture,
           speedUpOnLongPress: _speedUpOnLongPress,
           seekOnDoubleTap: _seekOnDoubleTap,
+          seekBarPositionColor: AppColors.pink,
+          seekBarThumbColor: AppColors.pink,
+          seekBarThumbSize: 14,
+          buttonBarButtonColor: Colors.white,
+          primaryButtonBar: _primaryButtons(),
           topButtonBar: [
             BackButtonWidget(),
             Expanded(child: VideoTitleWidget()),
