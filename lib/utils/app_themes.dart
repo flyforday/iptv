@@ -13,10 +13,10 @@ class AppColors {
   static const Color darkSurfaceHigh = Color(0xFF1F1F29);
   static const Color darkOutline = Color(0xFF2C2C38);
 
-  // Mode clair : blanc légèrement rosé.
-  static const Color lightBackground = Color(0xFFFFFFFF);
-  static const Color lightSurface = Color(0xFFF7F5F8);
-  static const Color lightSurfaceHigh = Color(0xFFEFEBF0);
+  // Mode clair : fond gris très doux, cartes et champs en blanc.
+  static const Color lightBackground = Color(0xFFFAF8FA);
+  static const Color lightSurface = Color(0xFFFFFFFF);
+  static const Color lightSurfaceHigh = Color(0xFFF1EDF2);
   static const Color lightOutline = Color(0xFFE2DCE4);
 }
 
@@ -141,9 +141,7 @@ class AppThemes {
             fontWeight: states.contains(WidgetState.selected)
                 ? FontWeight.w700
                 : FontWeight.w500,
-            color: states.contains(WidgetState.selected)
-                ? onBackground
-                : muted,
+            color: states.contains(WidgetState.selected) ? onBackground : muted,
           ),
         ),
       ),

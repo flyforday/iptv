@@ -66,6 +66,8 @@ class DetailView extends StatelessWidget {
     final gutter = isTablet ? 32.0 : 16.0;
 
     final info = _InfoBlock(view: this, centered: false);
+    final light = Theme.of(context).brightness == Brightness.light;
+    const rounded = BorderRadius.vertical(bottom: Radius.circular(28));
 
     return Scaffold(
       body: Stack(
@@ -73,13 +75,29 @@ class DetailView extends StatelessWidget {
           CustomScrollView(
             slivers: [
               SliverToBoxAdapter(
-                child: isTablet
-                    ? _TabletHeader(view: this, gutter: gutter, info: info)
-                    : _PhoneHeader(view: this),
+                child: ClipRRect(
+                  borderRadius: light ? rounded : BorderRadius.zero,
+                  child: isTablet
+                      // Infos posées sur l'image : toujours en blanc.
+                      ? Theme(
+                          data: AppThemes.darkTheme,
+                          child: _TabletHeader(
+                            view: this,
+                            gutter: gutter,
+                            info: info,
+                          ),
+                        )
+                      : _PhoneHeader(view: this),
+                ),
               ),
               if (!isTablet)
                 SliverPadding(
-                  padding: EdgeInsets.fromLTRB(gutter, 4, gutter, 0),
+                  padding: EdgeInsets.fromLTRB(
+                    gutter,
+                    light ? 16 : 4,
+                    gutter,
+                    0,
+                  ),
                   sliver: SliverToBoxAdapter(child: info),
                 ),
               SliverPadding(
@@ -141,10 +159,7 @@ class _Backdrop extends StatelessWidget {
   Widget build(BuildContext context) {
     final backdrop = view.backdropUrl;
     if (backdrop != null && backdrop.isNotEmpty) {
-      return AppImage(
-        url: backdrop,
-        fallback: (_) => _blurredPoster(context),
-      );
+      return AppImage(url: backdrop, fallback: (_) => _blurredPoster(context));
     }
     return _blurredPoster(context);
   }
@@ -170,7 +185,12 @@ class _Fade extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bg = Theme.of(context).scaffoldBackgroundColor;
+    final theme = Theme.of(context);
+    // En mode clair, on fond vers un voile sombre (et non vers le blanc, qui
+    // donne un gris délavé) ; l'en-tête se termine par des coins arrondis.
+    final bg = theme.brightness == Brightness.light
+        ? const Color(0xFF0B0B0F).withValues(alpha: 0.72)
+        : theme.scaffoldBackgroundColor;
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(

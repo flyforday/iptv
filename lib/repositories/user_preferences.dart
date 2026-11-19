@@ -217,7 +217,7 @@ class UserPreferences {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getStringList(_hiddenCategoriesKey) ?? [];
   }
-  
+
   static Future<void> setThemeMode(ThemeMode mode) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyThemeMode, mode.toString().split('.').last);
@@ -225,7 +225,7 @@ class UserPreferences {
 
   static Future<ThemeMode> getThemeMode() async {
     final prefs = await SharedPreferences.getInstance();
-    final mode = prefs.getString(_keyThemeMode) ?? 'system';
+    final mode = prefs.getString(_keyThemeMode) ?? 'dark';
     switch (mode) {
       case 'light':
         return ThemeMode.light;
