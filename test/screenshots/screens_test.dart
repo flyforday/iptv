@@ -21,7 +21,10 @@ import 'package:another_iptv_player/models/series.dart';
 import 'package:another_iptv_player/models/vod_streams.dart';
 import 'package:another_iptv_player/models/watch_history.dart';
 import 'package:another_iptv_player/services/app_state.dart';
+import 'package:another_iptv_player/ui/detail/detail_view.dart';
+import 'package:another_iptv_player/ui/detail/episodes_section.dart';
 import 'package:another_iptv_player/ui/home/catalog_view.dart';
+import 'package:another_iptv_player/ui/widgets/media_row.dart';
 import 'package:another_iptv_player/ui/home/home_feed.dart';
 import 'package:another_iptv_player/ui/home/main_shell.dart';
 import 'package:another_iptv_player/ui/widgets/app_image.dart';
@@ -302,6 +305,71 @@ Widget _shell({required int index, required double topInset}) => MainShell(
   ],
 );
 
+
+Widget _movieDetail() => DetailView(
+  title: 'Minuit à Lisbonne',
+  posterUrl: _poster(9),
+  backdropUrl: 'https://test/backdrop.jpg',
+  rating: 7.4,
+  meta: const ['2025', '1 h 58', 'Drame, Romance'],
+  plot:
+      'Une pianiste en tournée rate son dernier train et passe une nuit '
+      'entière à traverser Lisbonne avec un inconnu. Au fil des rues, '
+      'des souvenirs remontent et une décision s’impose avant l’aube.',
+  credits: const [
+    ('Réalisation', 'Inès Moreau'),
+    ('Avec', 'Clara Diaz, Tomás Neves, Julie Arnaud'),
+  ],
+  playLabel: 'Reprendre',
+  onPlay: () {},
+  progress: 0.44,
+  progressLabel: 'Reste 1 h 06',
+  inList: true,
+  onToggleList: () {},
+  onTrailer: () {},
+  related: MediaRow<ContentItem>(
+    title: 'Dans la même catégorie',
+    items: _range(_movie, 2, 8),
+    itemBuilder: (context, item, width) => PosterCard(
+      title: item.name,
+      imageUrl: item.imagePath,
+      width: width,
+    ),
+  ),
+);
+
+Widget _seriesDetail() => DetailView(
+  title: 'Les Ombres du Nord',
+  posterUrl: _poster(1),
+  rating: 8.1,
+  meta: const ['2024', '2 saisons', 'Policier'],
+  plot:
+      'Dans un village isolé du Grand Nord, une enquêtrice revient sur '
+      'l’affaire qui a brisé sa carrière, dix ans plus tôt.',
+  playLabel: 'Reprendre S1 É3',
+  onPlay: () {},
+  onToggleList: () {},
+  onTrailer: () {},
+  extra: EpisodesSection(
+    initialSeason: 1,
+    onTap: (_) {},
+    episodes: [
+      for (var i = 1; i <= 5; i++)
+        EpisodeEntry(
+          id: 'e$i',
+          season: 1,
+          number: i,
+          title: ['Le retour', 'La cabane', 'Sous la neige', 'Le témoin', 'Aurore'][i - 1],
+          imageUrl: _poster(i + 3),
+          durationLabel: '${44 + i} min',
+          plot: 'Clara retrouve une piste que tout le monde croyait perdue.',
+          progress: i < 3 ? 1 : (i == 3 ? 0.45 : null),
+        ),
+      const EpisodeEntry(id: 'e21', season: 2, number: 1, title: 'Dégel'),
+    ],
+  ),
+);
+
 class _Device {
   final String name;
   final Size size;
@@ -366,6 +434,17 @@ void main() {
       await shoot(t, 'tv', _phone, b, (i) => _shell(index: 3, topInset: i));
     });
   }
+  for (final b in Brightness.values) {
+    testWidgets('film ${b.name}', (t) async {
+      await shoot(t, 'film', _phone, b, (_) => _movieDetail());
+    });
+    testWidgets('serie ${b.name}', (t) async {
+      await shoot(t, 'serie', _phone, b, (_) => _seriesDetail());
+    });
+  }
+  testWidgets('film tablette', (t) async {
+    await shoot(t, 'film', _tablet, Brightness.dark, (_) => _movieDetail());
+  });
   testWidgets('accueil tablette', (t) async {
     await shoot(t, 'accueil', _tablet, Brightness.dark, (i) => _shell(index: 0, topInset: i));
   });

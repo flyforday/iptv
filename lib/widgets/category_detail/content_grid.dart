@@ -20,9 +20,9 @@ class ContentGrid extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: ResponsiveHelper.getCrossAxisCount(context),
-        childAspectRatio: 0.65,
-        crossAxisSpacing: 8,
-        mainAxisSpacing: 8,
+        childAspectRatio: 0.64,
+        crossAxisSpacing: 10,
+        mainAxisSpacing: 12,
       ),
       itemCount: items.length,
       itemBuilder: (context, index) => ContentCard(

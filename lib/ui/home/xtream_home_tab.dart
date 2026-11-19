@@ -8,6 +8,7 @@ import '../../models/playlist_content_model.dart';
 import '../../models/watch_history.dart';
 import '../../repositories/favorites_repository.dart';
 import '../../screens/category_detail_screen.dart';
+import '../../screens/movies/movie_screen.dart';
 import '../../services/app_state.dart';
 import '../../services/watch_history_service.dart';
 import '../../utils/navigate_by_content_type.dart';
@@ -162,7 +163,14 @@ class _XtreamHomeTabState extends State<XtreamHomeTab> with RouteAware {
       onRefresh: _load,
       actions: HomeFeedActions(
         openItem: (item) => navigateByContentType(context, item),
-        playItem: (item) => navigateByContentType(context, item),
+        playItem: (item) => item.contentType == ContentType.vod
+            ? Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MovieScreen(contentItem: item, autoPlay: true),
+                ),
+              )
+            : navigateByContentType(context, item),
         resume: (h) => WatchHistoryController().playContent(context, h),
         removeFromHistory: _confirmRemove,
         openFavorite: (f) async {
