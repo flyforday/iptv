@@ -17,7 +17,10 @@ import '../../../widgets/player_widget.dart';
 import '../../repositories/favorites_repository.dart';
 import '../../ui/detail/detail_view.dart';
 import '../../ui/widgets/media_row.dart';
+import '../../services/custom_lists_service.dart';
+import '../../ui/lists/list_picker_sheet.dart';
 import '../../ui/widgets/poster_card.dart';
+import '../../utils/title_cleaner.dart';
 
 class MovieScreen extends StatefulWidget {
   final ContentItem contentItem;
@@ -46,6 +49,7 @@ class _MovieScreenState extends State<MovieScreen> {
   List<ContentItem> _categoryMovies = [];
   final _favorites = FavoritesRepository();
   bool _inList = false;
+  List<ContentItem> _versions = [];
 
   @override
   void initState() {
@@ -69,6 +73,7 @@ class _MovieScreenState extends State<MovieScreen> {
     _loadVodInfo();
     _loadCategoryMovies();
     _loadFavorite();
+    _loadVersions();
     if (widget.autoPlay) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) _openPlayer();
@@ -313,18 +318,74 @@ class _MovieScreenState extends State<MovieScreen> {
         widget.contentItem.id,
         ContentType.vod,
       );
-      if (mounted) setState(() => _inList = fav);
+      final playlist = AppState.currentPlaylist;
+      final inCustom = playlist == null
+          ? false
+          : await CustomListsService().containsAnywhere(
+              playlist.id,
+              widget.contentItem.id,
+            );
+      if (mounted) setState(() => _inList = fav || inCustom);
     } catch (_) {}
   }
 
+  /// « Ma liste » ouvre le choix des listes (Ma liste, Films de Noël…).
   Future<void> _toggleList() async {
-    final added = await _favorites.toggleFavorite(widget.contentItem);
-    if (!mounted) return;
-    setState(() => _inList = added);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(added ? 'Ajouté à Ma liste' : 'Retiré de Ma liste'),
-        duration: const Duration(seconds: 2),
+    await showListPicker(context, widget.contentItem);
+    await _loadFavorite();
+  }
+
+  /// Autres versions du même film chez le fournisseur (4K, UHD…).
+  Future<void> _loadVersions() async {
+    final repo = _repository;
+    if (repo == null) return;
+    try {
+      final info = TitleInfo.parse(widget.contentItem.name);
+      final found = await repo.searchMovies(info.title);
+      final same = found
+          .where((m) => TitleInfo.parse(m.name).key == info.key)
+          .map(
+            (m) => ContentItem(
+              m.streamId,
+              m.name,
+              m.streamIcon,
+              ContentType.vod,
+              containerExtension: m.containerExtension,
+              vodStream: m,
+            ),
+          )
+          .toList();
+      if (!same.any((v) => v.id == widget.contentItem.id)) {
+        same.add(widget.contentItem);
+      }
+      same.sort(_compareVersions);
+      if (mounted && same.length > 1) setState(() => _versions = same);
+    } catch (e) {
+      debugPrint('Error loading versions: $e');
+    }
+  }
+
+  /// Version standard d'abord, puis par qualité croissante.
+  static int _compareVersions(ContentItem a, ContentItem b) {
+    int rank(ContentItem i) {
+      final tags = TitleInfo.parse(i.name).tags.join(' ').toUpperCase();
+      if (tags.isEmpty) return 0;
+      if (tags.contains('UHD')) return 4;
+      if (tags.contains('4K')) return 3;
+      if (tags.contains('FULL HD') || tags.contains('HD')) return 1;
+      return 2;
+    }
+
+    final r = rank(a).compareTo(rank(b));
+    return r != 0 ? r : a.name.compareTo(b.name);
+  }
+
+  void _openVersion(ContentItem item) {
+    if (item.id == widget.contentItem.id) return;
+    Navigator.of(context).pushReplacement(
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => MovieScreen(contentItem: item),
+        transitionDuration: Duration.zero,
       ),
     );
   }
@@ -340,10 +401,10 @@ class _MovieScreenState extends State<MovieScreen> {
     final remaining = resuming && _watchHistory?.totalDuration != null
         ? _watchHistory!.totalDuration! - _watchHistory!.watchDuration!
         : null;
-    final related = _categoryMovies
-        .where((m) => m.id != widget.contentItem.id)
-        .take(20)
-        .toList();
+    final related = groupVersions(
+      _categoryMovies.where((m) => m.id != widget.contentItem.id),
+      (m) => m.name,
+    ).take(20).toList();
 
     return DetailView(
       title: widget.contentItem.name,
@@ -367,6 +428,13 @@ class _MovieScreenState extends State<MovieScreen> {
       progressLabel: remaining == null
           ? null
           : 'Reste ${_humanDuration(remaining.inSeconds)}',
+      versions: [
+        for (final v in _versions) TitleInfo.parse(v.name).versionLabel,
+      ],
+      selectedVersion: _versions.indexWhere(
+        (v) => v.id == widget.contentItem.id,
+      ),
+      onVersion: (i) => _openVersion(_versions[i]),
       inList: _inList,
       onToggleList: _toggleList,
       onTrailer: widget.contentItem.vodStream == null
@@ -405,7 +473,7 @@ class _MovieScreenState extends State<MovieScreen> {
       urlString = 'https://www.youtube.com/watch?v=$trailerKey';
     } else {
       final query = Uri.encodeQueryComponent(
-        '${widget.contentItem.name} trailer $languageCode',
+        '${cleanTitle(widget.contentItem.name)} trailer $languageCode',
       );
       urlString = 'https://www.youtube.com/results?search_query=$query';
     }

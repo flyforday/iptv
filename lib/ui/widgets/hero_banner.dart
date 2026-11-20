@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../utils/app_themes.dart';
+import '../../utils/title_cleaner.dart';
 import 'app_image.dart';
 import 'poster_card.dart';
 
@@ -89,7 +90,7 @@ class HeroBanner extends StatelessWidget {
                       : CrossAxisAlignment.center,
                   children: [
                     Text(
-                      title,
+                      cleanTitle(title),
                       textAlign: isTablet ? TextAlign.start : TextAlign.center,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,

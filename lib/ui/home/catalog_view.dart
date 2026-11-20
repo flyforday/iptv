@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../models/category_view_model.dart';
 import '../../models/playlist_content_model.dart';
+import '../../utils/title_cleaner.dart';
 import '../widgets/media_row.dart';
 import '../widgets/poster_card.dart';
 
@@ -44,8 +45,10 @@ class CatalogView extends StatelessWidget {
       itemBuilder: (context, i) {
         final category = categories[i];
         return MediaRow<ContentItem>(
-          title: category.category.categoryName,
-          items: category.contentItems,
+          title: cleanTitle(category.category.categoryName),
+          items: shape == PosterShape.channel
+              ? category.contentItems
+              : groupVersions(category.contentItems, (i) => i.name),
           shape: shape,
           onSeeAll: () => onSeeAll(category),
           itemBuilder: (context, item, width) => PosterCard(

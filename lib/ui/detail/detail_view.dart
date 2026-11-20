@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../utils/app_themes.dart';
 import '../widgets/app_image.dart';
 import '../widgets/poster_card.dart';
+import '../../utils/title_cleaner.dart';
 
 /// Fiche d'un film ou d'une série, façon plateforme de streaming.
 /// Purement visuelle : toutes les données et actions viennent de l'appelant.
@@ -25,6 +26,11 @@ class DetailView extends StatelessWidget {
   final VoidCallback? onPlay;
   final double? progress;
   final String? progressLabel;
+
+  /// Versions disponibles (« Standard », « 4K », « UHD »…).
+  final List<String> versions;
+  final int selectedVersion;
+  final ValueChanged<int>? onVersion;
 
   final bool inList;
   final VoidCallback? onToggleList;
@@ -51,6 +57,9 @@ class DetailView extends StatelessWidget {
     this.onPlay,
     this.progress,
     this.progressLabel,
+    this.versions = const [],
+    this.selectedVersion = 0,
+    this.onVersion,
     this.inList = false,
     this.onToggleList,
     this.onTrailer,
@@ -337,7 +346,7 @@ class _InfoBlock extends StatelessWidget {
       mainAxisSize: MainAxisSize.min,
       children: [
         Text(
-          view.title,
+          cleanTitle(view.title),
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w800,
             height: 1.1,
@@ -377,6 +386,35 @@ class _InfoBlock extends StatelessWidget {
               ),
           ],
         ),
+        if (view.versions.length > 1) ...[
+          const SizedBox(height: 14),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                Text(
+                  'Version',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: muted,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 10),
+                for (var i = 0; i < view.versions.length; i++)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: ChoiceChip(
+                      label: Text(view.versions[i]),
+                      selected: i == view.selectedVersion,
+                      onSelected: view.onVersion == null
+                          ? null
+                          : (_) => view.onVersion!(i),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 16),
         SizedBox(
           height: 50,

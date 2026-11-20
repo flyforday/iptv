@@ -8,6 +8,7 @@ import '../../models/watch_history.dart';
 import '../widgets/hero_banner.dart';
 import '../widgets/media_row.dart';
 import '../widgets/poster_card.dart';
+import '../../utils/title_cleaner.dart';
 
 /// Tout ce que l'accueil affiche, déjà chargé.
 class HomeFeedData {
@@ -189,8 +190,8 @@ class HomeFeedView extends StatelessWidget {
 
   Widget _categoryRow(CategoryViewModel category) {
     return MediaRow<ContentItem>(
-      title: category.category.categoryName,
-      items: category.contentItems,
+      title: cleanTitle(category.category.categoryName),
+      items: groupVersions(category.contentItems, (i) => i.name),
       onSeeAll: () => actions.openCategory(category),
       itemBuilder: (context, item, width) => PosterCard(
         title: item.name,

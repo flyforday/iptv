@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../utils/title_cleaner.dart';
+
 import '../../utils/app_themes.dart';
 import 'app_image.dart';
 
@@ -180,7 +182,7 @@ class PosterCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              title,
+              cleanTitle(title),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodyMedium?.copyWith(
@@ -233,7 +235,7 @@ class PosterCard extends StatelessWidget {
                 cacheWidth: (width * 2.5).round(),
                 fallback: (context) => Center(
                   child: Text(
-                    _initials(title),
+                    _initials(cleanTitle(title)),
                     style: theme.textTheme.titleLarge?.copyWith(
                       color: AppColors.pink,
                       fontWeight: FontWeight.w800,
@@ -244,7 +246,7 @@ class PosterCard extends StatelessWidget {
             ),
             const SizedBox(height: 6),
             Text(
-              title,
+              cleanTitle(title),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: theme.textTheme.bodySmall?.copyWith(
@@ -308,6 +310,7 @@ class TitleArt extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final title = cleanTitle(this.title);
     final colors = _palettes[title.hashCode.abs() % _palettes.length];
     return DecoratedBox(
       decoration: BoxDecoration(

@@ -6,6 +6,7 @@ import '../../models/content_type.dart';
 import '../../models/playlist_content_model.dart';
 import '../../services/app_state.dart';
 import '../../utils/navigate_by_content_type.dart';
+import '../../utils/title_cleaner.dart';
 import '../widgets/media_row.dart';
 import '../widgets/poster_card.dart';
 
@@ -63,7 +64,10 @@ class _UnifiedSearchScreenState extends State<UnifiedSearchScreen> {
     if (!mounted || q != _query) return;
     setState(() {
       _loading = false;
-      _movies = (results[0] as List)
+      _movies = groupVersions(
+        (results[0] as List),
+        (m) => m.name as String,
+      )
           .take(60)
           .map(
             (m) => ContentItem(
@@ -76,7 +80,10 @@ class _UnifiedSearchScreenState extends State<UnifiedSearchScreen> {
             ),
           )
           .toList();
-      _series = (results[1] as List)
+      _series = groupVersions(
+        (results[1] as List),
+        (s) => s.name as String,
+      )
           .take(60)
           .map(
             (s) => ContentItem(

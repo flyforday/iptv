@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../../services/custom_lists_service.dart';
+import '../../ui/lists/list_picker_sheet.dart';
 import 'package:another_iptv_player/database/database.dart';
 import 'package:another_iptv_player/models/api_configuration_model.dart';
 import 'package:another_iptv_player/models/content_type.dart';
@@ -142,29 +145,25 @@ class _SeriesScreenState extends State<SeriesScreen> {
       widget.contentItem.id,
       widget.contentItem.contentType,
     );
+    final playlist = AppState.currentPlaylist;
+    final inCustom = playlist == null
+        ? false
+        : await CustomListsService().containsAnywhere(
+            playlist.id,
+            widget.contentItem.id,
+          );
 
     if (mounted) {
       setState(() {
-        _isFavorite = isFavorite;
+        _isFavorite = isFavorite || inCustom;
       });
     }
   }
 
+  /// « Ma liste » ouvre le choix des listes (Ma liste, Films de Noël…).
   Future<void> _toggleFavorite() async {
-    final result = await _favoritesController.toggleFavorite(widget.contentItem);
-    if (mounted) {
-      setState(() {
-        _isFavorite = result;
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            result ? context.loc.added_to_favorites : context.loc.removed_from_favorites,
-          ),
-        ),
-      );
-    }
+    await showListPicker(context, widget.contentItem);
+    await _checkFavoriteStatus();
   }
 
   // Centralized navigation for episodes (used by list + Continue button)

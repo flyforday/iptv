@@ -14,6 +14,7 @@ import '../../services/watch_history_service.dart';
 import '../../utils/get_playlist_type.dart';
 import '../../utils/navigate_by_content_type.dart';
 import '../app_routes.dart';
+import '../../utils/title_cleaner.dart';
 import 'home_feed.dart';
 
 /// Onglet Accueil pour un compte Xtream : charge les données puis affiche
@@ -92,7 +93,10 @@ class _XtreamHomeTabState extends State<XtreamHomeTab> with RouteAware {
         .take(15)
         .toList();
 
-    final topMovies = (results[2] as List)
+    final topMovies = groupVersions(
+      results[2] as List,
+      (m) => m.name as String,
+    )
         .map(
           (m) => ContentItem(
             m.streamId,
@@ -104,7 +108,10 @@ class _XtreamHomeTabState extends State<XtreamHomeTab> with RouteAware {
           ),
         )
         .toList();
-    final topSeries = (results[3] as List)
+    final topSeries = groupVersions(
+      results[3] as List,
+      (s) => s.name as String,
+    )
         .map(
           (s) => ContentItem(
             s.seriesId,
@@ -129,7 +136,11 @@ class _XtreamHomeTabState extends State<XtreamHomeTab> with RouteAware {
       _data = HomeFeedData(
         hero: hero,
         continueWatching: continueWatching,
-        favorites: results[1] as List<Favorite>,
+        favorites: groupVersions(
+          results[1] as List<Favorite>,
+          (f) => f.name,
+          scopeOf: (f) => f.contentType.name,
+        ),
         topMovies: topMovies,
         topSeries: topSeries,
         movieCategories: widget.movieCategories,

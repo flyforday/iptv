@@ -1,3 +1,4 @@
+import 'package:another_iptv_player/utils/title_cleaner.dart';
 import 'package:another_iptv_player/l10n/localization_extension.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -46,7 +47,7 @@ class _CategoryDetailViewState extends State<_CategoryDetailView> {
           body: NestedScrollView(
             headerSliverBuilder: (context, innerBoxIsScrolled) => [
               CategoryAppBar(
-                title: controller.category.category.categoryName,
+                title: cleanTitle(controller.category.category.categoryName),
                 isSearching: controller.isSearching,
                 searchController: _searchController,
                 onSearchStart: controller.startSearch,

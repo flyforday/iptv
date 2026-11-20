@@ -40,6 +40,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:another_iptv_player/services/custom_lists_service.dart';
+import 'package:another_iptv_player/ui/lists/list_picker_sheet.dart';
 
 const _imgDir = 'test/screenshots/images';
 final Map<String, ui.Image> _images = {};
@@ -108,7 +110,7 @@ Future<void> _loadImages() async {
 
 ContentItem _movie(int i) => ContentItem(
   'm$i',
-  _titles[i % 16],
+  '|FR| ${_titles[i % 16]}',
   _poster(i),
   ContentType.vod,
   containerExtension: 'mkv',
@@ -342,19 +344,78 @@ Widget _shell({required int index, required double topInset}) => MainShell(
               ),
           ],
           history: _homeData().continueWatching,
+          customLists: _customLists,
         ),
         onOpenFavorite: (_) {},
         onRemoveFavorite: (_) {},
         onResume: (_) {},
         onRemoveHistory: (_) {},
+        onRemoveFromList: (_, __) {},
+        onCreateList: () {},
+        onListMenu: (_) {},
       ),
     ),
   ],
 );
 
 
-Widget _movieDetail() => DetailView(
-  title: 'Minuit à Lisbonne',
+final _customLists = [
+  CustomList(
+    id: 'noel',
+    name: 'Films de Noël',
+    items: [
+      for (final i in [11, 4, 8, 14])
+        Favorite(
+          id: 'n$i',
+          playlistId: 'demo',
+          contentType: ContentType.vod,
+          streamId: 'm$i',
+          name: '|FR| ${_titles[i]}',
+          imagePath: _poster(i),
+          createdAt: DateTime(2026),
+          updatedAt: DateTime(2026),
+        ),
+    ],
+  ),
+  const CustomList(id: 'famille', name: 'Soirée en famille', items: []),
+];
+
+Widget _movieDetail({bool withSheet = false}) {
+  final detail = _movieDetailView();
+  if (!withSheet) return detail;
+  return Stack(
+    children: [
+      detail,
+      const Positioned.fill(child: ColoredBox(color: Color(0x99000000))),
+      Align(
+        alignment: Alignment.bottomCenter,
+        child: Builder(
+          builder: (context) => Material(
+            color: Theme.of(context).bottomSheetTheme.backgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            child: Padding(
+              padding: const EdgeInsets.only(top: 22, bottom: 24),
+              child: ListPickerView(
+                inMyList: true,
+                lists: _customLists,
+                itemId: 'm11',
+                onToggleMyList: () {},
+                onToggle: (_) {},
+                onCreate: () {},
+              ),
+            ),
+          ),
+        ),
+      ),
+    ],
+  );
+}
+
+Widget _movieDetailView() => DetailView(
+  title: '|FR| Minuit à Lisbonne (4K)',
+  versions: const ['Standard', '4K', 'UHD'],
+  selectedVersion: 1,
+  onVersion: (_) {},
   posterUrl: _poster(9),
   backdropUrl: 'https://test/backdrop.jpg',
   rating: 7.4,
@@ -490,6 +551,11 @@ void main() {
     });
     testWidgets('serie ${b.name}', (t) async {
       await shoot(t, 'serie', _phone, b, (_) => _seriesDetail());
+    });
+  }
+  for (final b in Brightness.values) {
+    testWidgets('listes ${b.name}', (t) async {
+      await shoot(t, 'listes', _phone, b, (_) => _movieDetail(withSheet: true));
     });
   }
   testWidgets('film tablette', (t) async {

@@ -42,6 +42,21 @@ class Favorite {
     );
   }
 
+  factory Favorite.fromJson(Map<String, dynamic> json) {
+    return Favorite(
+      id: json['id'] as String,
+      playlistId: json['playlist_id'] as String,
+      contentType: ContentType.values[json['content_type'] as int],
+      streamId: json['stream_id'] as String,
+      episodeId: json['episode_id'] as String?,
+      m3uItemId: json['m3u_item_id'] as String?,
+      name: json['name'] as String,
+      imagePath: json['image_path'] as String?,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,

@@ -1,3 +1,5 @@
+import 'package:another_iptv_player/models/content_type.dart';
+import 'package:another_iptv_player/utils/title_cleaner.dart';
 import 'package:flutter/material.dart';
 import 'package:another_iptv_player/models/category_view_model.dart';
 import 'package:another_iptv_player/models/playlist_content_model.dart';
@@ -38,7 +40,13 @@ class CategoryDetailController extends ChangeNotifier {
   Future<void> loadContent() async {
     try {
       _setLoading(true);
-      _contentItems = await _contentService.fetchContentByCategory(category);
+      final items = await _contentService.fetchContentByCategory(category);
+      // Une seule vignette par film ou série (les versions 4K, UHD… se
+      // choisissent sur la fiche).
+      _contentItems = items.isNotEmpty &&
+              items.first.contentType != ContentType.liveStream
+          ? groupVersions(items, (i) => i.name)
+          : items;
       _genres = _extractGenres(_contentItems);
       _selectedGenre = null;
       _setLoading(false);
