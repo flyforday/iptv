@@ -6,6 +6,7 @@ import '../../models/content_type.dart';
 import '../../models/playlist_content_model.dart';
 import '../../services/app_state.dart';
 import '../../utils/navigate_by_content_type.dart';
+import '../../services/movie_versions.dart';
 import '../../utils/title_cleaner.dart';
 import '../widgets/media_row.dart';
 import '../widgets/poster_card.dart';
@@ -62,12 +63,17 @@ class _UnifiedSearchScreenState extends State<UnifiedSearchScreen> {
       repo.searchLiveStreams(q),
     ]);
     if (!mounted || q != _query) return;
+    // Même titre ≠ même film : on ne fusionne que si le fournisseur le confirme.
+    final movies = await MovieVersions.group<dynamic>(
+      repo,
+      (results[0] as List).take(120).toList(),
+      idOf: (m) => m.streamId as String,
+      nameOf: (m) => m.name as String,
+    );
+    if (!mounted || q != _query) return;
     setState(() {
       _loading = false;
-      _movies = groupVersions(
-        (results[0] as List),
-        (m) => m.name as String,
-      )
+      _movies = movies
           .take(60)
           .map(
             (m) => ContentItem(
@@ -83,6 +89,7 @@ class _UnifiedSearchScreenState extends State<UnifiedSearchScreen> {
       _series = groupVersions(
         (results[1] as List),
         (s) => s.name as String,
+        identityOf: (s) => yearOf(s.releaseDate as String?),
       )
           .take(60)
           .map(

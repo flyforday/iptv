@@ -45,7 +45,11 @@ class CategoryDetailController extends ChangeNotifier {
       // choisissent sur la fiche).
       _contentItems = items.isNotEmpty &&
               items.first.contentType != ContentType.liveStream
-          ? groupVersions(items, (i) => i.name)
+          ? groupVersions(
+              items,
+              (i) => i.name,
+              identityOf: (i) => yearOf(i.seriesStream?.releaseDate),
+            )
           : items;
       _genres = _extractGenres(_contentItems);
       _selectedGenre = null;

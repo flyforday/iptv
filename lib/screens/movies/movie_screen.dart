@@ -20,6 +20,7 @@ import '../../ui/widgets/media_row.dart';
 import '../../services/custom_lists_service.dart';
 import '../../ui/lists/list_picker_sheet.dart';
 import '../../ui/widgets/poster_card.dart';
+import '../../services/movie_versions.dart';
 import '../../utils/title_cleaner.dart';
 
 class MovieScreen extends StatefulWidget {
@@ -50,6 +51,7 @@ class _MovieScreenState extends State<MovieScreen> {
   final _favorites = FavoritesRepository();
   bool _inList = false;
   List<ContentItem> _versions = [];
+  Map<String, String> _versionLabels = {};
 
   @override
   void initState() {
@@ -336,48 +338,86 @@ class _MovieScreenState extends State<MovieScreen> {
   }
 
   /// Autres versions du même film chez le fournisseur (4K, UHD…).
+  /// Un film de même titre n'est proposé que si le fournisseur confirme que
+  /// c'est le même film (identifiant TMDB, ou année et durée).
   Future<void> _loadVersions() async {
     final repo = _repository;
     if (repo == null) return;
     try {
       final info = TitleInfo.parse(widget.contentItem.name);
       final found = await repo.searchMovies(info.title);
-      final same = found
+      final candidates = found
           .where((m) => TitleInfo.parse(m.name).key == info.key)
-          .map(
-            (m) => ContentItem(
-              m.streamId,
-              m.name,
-              m.streamIcon,
-              ContentType.vod,
-              containerExtension: m.containerExtension,
-              vodStream: m,
-            ),
-          )
+          .where((m) => m.streamId != widget.contentItem.id)
+          .take(15)
           .toList();
-      if (!same.any((v) => v.id == widget.contentItem.id)) {
-        same.add(widget.contentItem);
+      if (candidates.isEmpty) return;
+      final me = await MovieVersions.identityOf(repo, widget.contentItem.id);
+      if (me.isEmpty) return;
+      final ids = await Future.wait(
+        candidates.map((m) => MovieVersions.identityOf(repo, m.streamId)),
+      );
+      final same = <ContentItem>[widget.contentItem];
+      for (var i = 0; i < candidates.length; i++) {
+        if (!ids[i].sameAs(me)) continue;
+        final m = candidates[i];
+        same.add(
+          ContentItem(
+            m.streamId,
+            m.name,
+            m.streamIcon,
+            ContentType.vod,
+            containerExtension: m.containerExtension,
+            vodStream: m,
+          ),
+        );
       }
-      same.sort(_compareVersions);
-      if (mounted && same.length > 1) setState(() => _versions = same);
+      if (same.length < 2) return;
+
+      // Nom de chaque version : mention dans le titre, sinon dans le nom de
+      // la catégorie (« FILMS 4K LIGHT »), sinon « Standard ».
+      final cats = {
+        for (final c in await repo.getVodCategories() ?? const [])
+          c.categoryId: c.categoryName,
+      };
+      final labels = <String, String>{};
+      for (final v in same) {
+        var tags = TitleInfo.parse(v.name).tags;
+        if (tags.isEmpty) {
+          tags = qualityTagsIn(cats[v.vodStream?.categoryId] ?? '');
+        }
+        labels[v.id] = tags.isEmpty ? 'Standard' : tags.join(' · ');
+      }
+      same.sort((a, b) {
+        final r = _rank(labels[a.id]!).compareTo(_rank(labels[b.id]!));
+        return r != 0 ? r : labels[a.id]!.compareTo(labels[b.id]!);
+      });
+      // Deux versions au nom identique : « Standard », « Standard 2 ».
+      final seen = <String, int>{};
+      for (final v in same) {
+        final n = (seen[labels[v.id]!] ?? 0) + 1;
+        seen[labels[v.id]!] = n;
+        if (n > 1) labels[v.id] = '${labels[v.id]} $n';
+      }
+      if (mounted) {
+        setState(() {
+          _versions = same;
+          _versionLabels = labels;
+        });
+      }
     } catch (e) {
       debugPrint('Error loading versions: $e');
     }
   }
 
   /// Version standard d'abord, puis par qualité croissante.
-  static int _compareVersions(ContentItem a, ContentItem b) {
-    int rank(ContentItem i) {
-      final tags = TitleInfo.parse(i.name).tags.join(' ').toUpperCase();
-      if (tags.isEmpty) return 0;
-      if (tags.contains('UHD')) return 4;
-      if (tags.contains('4K')) return 3;
-      if (tags.contains('FULL HD') || tags.contains('HD')) return 1;
-      return 2;
-    }
-
-    final r = rank(a).compareTo(rank(b));
-    return r != 0 ? r : a.name.compareTo(b.name);
+  static int _rank(String label) {
+    final t = label.toUpperCase();
+    if (t == 'STANDARD') return 0;
+    if (t.contains('UHD')) return 4;
+    if (t.contains('4K')) return 3;
+    if (t.contains('HD')) return 1;
+    return 2;
   }
 
   void _openVersion(ContentItem item) {
@@ -401,10 +441,10 @@ class _MovieScreenState extends State<MovieScreen> {
     final remaining = resuming && _watchHistory?.totalDuration != null
         ? _watchHistory!.totalDuration! - _watchHistory!.watchDuration!
         : null;
-    final related = groupVersions(
-      _categoryMovies.where((m) => m.id != widget.contentItem.id),
-      (m) => m.name,
-    ).take(20).toList();
+    final related = _categoryMovies
+        .where((m) => m.id != widget.contentItem.id)
+        .take(20)
+        .toList();
 
     return DetailView(
       title: widget.contentItem.name,
@@ -429,7 +469,7 @@ class _MovieScreenState extends State<MovieScreen> {
           ? null
           : 'Reste ${_humanDuration(remaining.inSeconds)}',
       versions: [
-        for (final v in _versions) TitleInfo.parse(v.name).versionLabel,
+        for (final v in _versions) _versionLabels[v.id] ?? 'Standard',
       ],
       selectedVersion: _versions.indexWhere(
         (v) => v.id == widget.contentItem.id,

@@ -1,6 +1,7 @@
 // Accès à l'API Xtream Codes du fournisseur, via le relais /p/ du site.
 
 import { profiles } from './store.js';
+import { parseTitle } from './titles.js';
 
 /** Adresse relayée : http://h:8080/x?y → /p/http/h:8080/x?y */
 export function relay(url) {
@@ -49,9 +50,20 @@ async function call(p, action, extra = {}) {
   const q = new URLSearchParams({ username: p.user, password: p.pass });
   if (action) q.set('action', action);
   for (const [k, v] of Object.entries(extra)) q.set(k, v);
-  const res = await fetch(relay(`${p.server}/player_api.php?${q}`));
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
-  return res.json();
+  let res;
+  try {
+    res = await fetch(relay(`${p.server}/player_api.php?${q}`));
+  } catch {
+    throw new Error('réseau : pas de connexion internet ?');
+  }
+  const text = await res.text();
+  const brief = () => text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
+  if (!res.ok) throw new Error(`HTTP ${res.status}${text ? ' : ' + brief() : ''}`);
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(text.trim() ? `réponse inattendue : ${brief()}` : 'réponse vide du serveur');
+  }
 }
 
 export async function login(server, user, pass) {
@@ -196,6 +208,59 @@ export async function seriesInfo(id) {
     () => call(p, 'get_series_info', { series_id: id }),
     6 * 3600e3,
   );
+}
+
+// ---------- Même film ? ----------
+
+/** Identité d'un film d'après sa fiche : identifiant TMDB, année, durée. */
+export async function filmIdentity(id) {
+  try {
+    const info = (await vodInfo(id))?.info;
+    if (!info || Array.isArray(info)) return {};
+    let tmdb = String(info.tmdb_id ?? info.tmdb ?? '').trim();
+    if (!tmdb || tmdb === '0' || tmdb === 'null') tmdb = '';
+    const year = (String(info.releasedate || info.release_date || info.year || '').match(/(19|20)\d{2}/) || [])[0] || '';
+    let minutes = Number(info.duration_secs) > 0 ? Math.floor(info.duration_secs / 60) : 0;
+    const m = !minutes && String(info.duration || '').match(/^(\d+):(\d{2})/);
+    if (m) minutes = Number(m[1]) * 60 + Number(m[2]);
+    return { tmdb, year, minutes };
+  } catch {
+    return {};
+  }
+}
+
+/** Même film seulement si une information fiable le confirme. */
+export function sameFilm(a, b) {
+  if (a.tmdb && b.tmdb) return a.tmdb === b.tmdb;
+  if (a.year && b.year) {
+    if (a.year !== b.year) return false;
+    return a.minutes && b.minutes ? Math.abs(a.minutes - b.minutes) <= 6 : true;
+  }
+  return false;
+}
+
+/** Une vignette par film : fusion seulement si le fournisseur confirme. */
+export async function groupFilms(items, maxLookups = 40) {
+  const byKey = new Map();
+  for (const i of items) {
+    const k = parseTitle(i.name).key;
+    if (!byKey.has(k)) byKey.set(k, []);
+    byKey.get(k).push(i);
+  }
+  const toCheck = [...byKey.values()].filter((l) => l.length > 1).flat().slice(0, maxLookups);
+  if (!toCheck.length) return items;
+  const ids = new Map();
+  await Promise.all(toCheck.map(async (i) => ids.set(i.id, await filmIdentity(i.id))));
+  const dropped = new Set();
+  for (const list of byKey.values()) {
+    const kept = [];
+    for (const i of list) {
+      const id = ids.get(i.id);
+      if (id && kept.some((k) => ids.get(k.id) && sameFilm(ids.get(k.id), id))) dropped.add(i);
+      else kept.push(i);
+    }
+  }
+  return items.filter((i) => !dropped.has(i));
 }
 
 // ---------- Adresses de lecture (directes, sans relais) ----------

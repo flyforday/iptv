@@ -63,7 +63,10 @@ export async function relay(request, parts) {
       redirect: 'follow',
     });
   } catch (e) {
-    return new Response('Serveur IPTV injoignable', { status: 502 });
+    return new Response(`Serveur IPTV injoignable depuis le relais (${e && e.message ? e.message : e})`, {
+      status: 502,
+      headers: { 'access-control-allow-origin': '*' },
+    });
   }
 
   const out = new Headers();

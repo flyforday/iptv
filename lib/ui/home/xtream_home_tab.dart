@@ -111,6 +111,7 @@ class _XtreamHomeTabState extends State<XtreamHomeTab> with RouteAware {
     final topSeries = groupVersions(
       results[3] as List,
       (s) => s.name as String,
+      identityOf: (s) => yearOf(s.releaseDate as String?),
     )
         .map(
           (s) => ContentItem(
