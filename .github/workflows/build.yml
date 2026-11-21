@@ -1,0 +1,118 @@
+name: Fabriquer l'app
+
+# Chaque push sur main fabrique l'APK Android et l'app iPhone, puis les publie
+# dans une Release GitHub. Les pull requests ne fabriquent que l'APK (plus rapide
+# et économe en minutes macOS).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Une nouvelle version annule la fabrication en cours de la même branche.
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: '3.35.7'
+
+jobs:
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: dart run build_runner build --delete-conflicting-outputs
+
+      # Sans ce secret, l'APK est signé avec une clé de debug : il s'installe,
+      # mais Android refuse les mises à jour depuis l'app.
+      # La clé est recréée à l'identique à partir d'une phrase secrète
+      # (secret ANDROID_SIGNING_SEED) : aucun fichier de clé n'est stocké.
+      - name: Clé de signature
+        env:
+          ANDROID_SIGNING_SEED: ${{ secrets.ANDROID_SIGNING_SEED }}
+        if: env.ANDROID_SIGNING_SEED != ''
+        run: |
+          pip install --quiet cryptography
+          python3 tool/make_keystore.py android/app/famille.p12
+          {
+            echo "storeFile=famille.p12"
+            echo "storeType=PKCS12"
+            echo "storePassword=$ANDROID_SIGNING_SEED"
+            echo "keyAlias=famille"
+            echo "keyPassword=$ANDROID_SIGNING_SEED"
+          } > android/key.properties
+
+      - run: flutter build apk --release --build-number=${{ github.run_number }}
+
+      - run: mv build/app/outputs/flutter-apk/app-release.apk LemaireTV.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: LemaireTV.apk
+
+  ios:
+    if: github.event_name != 'pull_request'
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - run: flutter pub get
+      - run: dart run build_runner build --delete-conflicting-outputs
+
+      # Build non signé : Sideloadly ou AltStore le signent à l'installation
+      # avec un identifiant Apple gratuit.
+      - run: flutter build ios --release --no-codesign --build-number=${{ github.run_number }}
+
+      - name: Emballer en .ipa
+        run: |
+          mkdir Payload
+          cp -R build/ios/iphoneos/Runner.app Payload/
+          zip -qr LemaireTV.ipa Payload
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: LemaireTV.ipa
+
+  release:
+    needs: [android, ios]
+    if: github.event_name != 'pull_request' && !cancelled() && needs.android.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Lemaire TV ${{ github.run_number }}
+          make_latest: true
+          files: |
+            LemaireTV.apk
+            LemaireTV.ipa
+          fail_on_unmatched_files: false

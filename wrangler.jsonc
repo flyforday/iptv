@@ -1,0 +1,7 @@
+// Déploiement Cloudflare Workers (gratuit) : site web/ + relais /p/.
+{
+  "name": "iptv",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": "./web", "binding": "ASSETS" }
+}
