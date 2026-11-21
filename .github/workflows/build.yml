@@ -38,22 +38,24 @@ jobs:
       - run: flutter pub get
       - run: dart run build_runner build --delete-conflicting-outputs
 
-      # Clé de signature de la famille (secrets du dépôt). Sans elle, l'APK est
-      # signé avec une clé de debug : il s'installe, mais les mises à jour
-      # demanderont de désinstaller l'ancienne version.
+      # Sans ce secret, l'APK est signé avec une clé de debug : il s'installe,
+      # mais Android refuse les mises à jour depuis l'app.
+      # La clé est recréée à l'identique à partir d'une phrase secrète
+      # (secret ANDROID_SIGNING_SEED) : aucun fichier de clé n'est stocké.
       - name: Clé de signature
         env:
-          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-        if: env.KEYSTORE_BASE64 != ''
+          ANDROID_SIGNING_SEED: ${{ secrets.ANDROID_SIGNING_SEED }}
+        if: env.ANDROID_SIGNING_SEED != ''
         run: |
-          echo "$KEYSTORE_BASE64" | base64 -d > android/app/famille.jks
-          cat > android/key.properties <<PROPS
-          storeFile=famille.jks
-          storePassword=$KEYSTORE_PASSWORD
-          keyAlias=famille
-          keyPassword=$KEYSTORE_PASSWORD
-          PROPS
+          pip install --quiet cryptography
+          python3 tool/make_keystore.py android/app/famille.p12
+          {
+            echo "storeFile=famille.p12"
+            echo "storeType=PKCS12"
+            echo "storePassword=$ANDROID_SIGNING_SEED"
+            echo "keyAlias=famille"
+            echo "keyPassword=$ANDROID_SIGNING_SEED"
+          } > android/key.properties
 
       - run: flutter build apk --release --build-number=${{ github.run_number }}
 
