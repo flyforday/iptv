@@ -1,22 +1,12 @@
-// Garde l'app utilisable hors ligne au démarrage et toujours à jour :
-// on essaie d'abord le réseau, le cache ne sert qu'en secours.
-const CACHE = 'lemaire-tv-v1';
-
+// Service worker minimal : il ne touche à aucune requête, tout passe par le
+// réseau (Safari refusait d'ouvrir la page quand l'ancien renvoyait une réponse
+// vide). Il efface aussi les caches laissés par les versions précédentes.
 self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
-
-self.addEventListener('fetch', (e) => {
-  const url = new URL(e.request.url);
-  if (e.request.method !== 'GET' || url.origin !== location.origin || url.pathname.startsWith('/p/')) {
-    return;
-  }
-  e.respondWith(
-    fetch(e.request)
-      .then((res) => {
-        const copy = res.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, copy));
-        return res;
-      })
-      .catch(() => caches.match(e.request).then((r) => r || caches.match('/'))),
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+      .then(() => self.clients.claim()),
   );
 });
