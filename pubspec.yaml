@@ -54,6 +54,7 @@ dependencies:
   connectivity_plus: ^6.1.4
   url_launcher: ^6.3.2
   package_info_plus: ^8.0.0
+  ota_update: ^7.1.0
   wakelock_plus: ^1.2.5
 
 dependency_overrides:

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
-/// Couleurs de la marque Famille TV.
+/// Couleurs de la marque Lemaire TV.
 class AppColors {
   static const Color pink = Color(0xFFFF2E7E);
   static const Color pinkDark = Color(0xFFE0115F);

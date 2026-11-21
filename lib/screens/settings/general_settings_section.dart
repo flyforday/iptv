@@ -1,3 +1,4 @@
+import 'package:another_iptv_player/services/update_service.dart';
 import 'package:another_iptv_player/database/database.dart';
 import 'package:another_iptv_player/screens/settings/subtitle_settings_section.dart';
 import 'package:another_iptv_player/services/service_locator.dart';
@@ -72,7 +73,7 @@ class _GeneralSettingsWidgetState extends State<GeneralSettingsWidget> {
         _seekGesture = seekGesture;
         _speedUpOnLongPress = speedUpOnLongPress;
         _seekOnDoubleTap = seekOnDoubleTap;
-        _appVersion = packageInfo.version;
+        _appVersion = '${packageInfo.version} (${packageInfo.buildNumber})';
         _isLoading = false;
       });
     } catch (e) {
@@ -369,6 +370,13 @@ class _GeneralSettingsWidgetState extends State<GeneralSettingsWidget> {
                 title: Text(context.loc.app_version),
                 subtitle: Text(_appVersion.isNotEmpty ? _appVersion : 'Loading...'),
                 dense: true,
+              ),
+              const Divider(height: 1),
+              ListTile(
+                leading: const Icon(Icons.system_update_rounded),
+                title: const Text('Rechercher une mise à jour'),
+                dense: true,
+                onTap: () => UpdateService.check(context),
               ),
               const Divider(height: 1),
               ListTile(

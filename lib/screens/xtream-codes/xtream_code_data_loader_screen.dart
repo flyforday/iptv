@@ -214,7 +214,7 @@ class XtreamCodeDataLoaderScreenState extends State<XtreamCodeDataLoaderScreen>
                           ),
                           SizedBox(height: 24),
                           Text(
-                            'Famille TV',
+                            'Lemaire TV',
                             style: TextStyle(
                               fontSize: 32,
                               fontWeight: FontWeight.w300,

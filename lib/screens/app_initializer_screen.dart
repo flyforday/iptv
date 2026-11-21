@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../repositories/user_preferences.dart';
 import '../../services/app_state.dart';
 import '../../services/playlist_service.dart';
+import '../../services/update_service.dart';
 import 'xtream-codes/xtream_code_home_screen.dart';
 
 class AppInitializerScreen extends StatefulWidget {
@@ -22,6 +23,10 @@ class _AppInitializerScreenState extends State<AppInitializerScreen> {
   void initState() {
     super.initState();
     _loadLastPlaylist();
+    // Vérifie s'il existe une nouvelle version (une fois par lancement).
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) UpdateService.checkOnLaunch(context);
+    });
   }
 
   Future<void> _loadLastPlaylist() async {

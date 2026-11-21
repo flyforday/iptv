@@ -1,4 +1,4 @@
-# Famille TV
+# Lemaire TV
 
 App mobile (Android et iPhone, téléphone et tablette) pour regarder les films,
 séries et chaînes de son propre abonnement IPTV (codes Xtream ou lien M3U).
@@ -13,9 +13,9 @@ Basée sur [Another IPTV Player](https://github.com/bsogulcan/another-iptv-playe
 Les fichiers sont dans l'onglet **Releases** du dépôt (fabriqués automatiquement
 à chaque mise à jour de `main`).
 
-- **Android** : télécharger `FamilleTV.apk` sur le téléphone, l'ouvrir et
+- **Android** : télécharger `LemaireTV.apk` sur le téléphone, l'ouvrir et
   autoriser l'installation d'applications inconnues.
-- **iPhone / iPad** : télécharger `FamilleTV.ipa` sur un ordinateur et
+- **iPhone / iPad** : télécharger `LemaireTV.ipa` sur un ordinateur et
   l'installer avec [Sideloadly](https://sideloadly.io) (Windows ou Mac) et un
   identifiant Apple gratuit. Avec un compte gratuit, Apple limite l'app à
   7 jours : il suffit de la réinstaller (ou d'utiliser AltStore, qui la

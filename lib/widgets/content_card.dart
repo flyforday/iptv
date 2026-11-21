@@ -5,7 +5,7 @@ import 'package:another_iptv_player/models/content_type.dart';
 import '../ui/widgets/poster_card.dart';
 
 /// Vignette d'un contenu (grilles et rangées de l'app d'origine), au même
-/// style que le reste de Famille TV.
+/// style que le reste de Lemaire TV.
 class ContentCard extends StatelessWidget {
   final ContentItem content;
   final double width;

@@ -283,7 +283,7 @@ class BrandMark extends StatelessWidget {
         ),
         const SizedBox(width: 8),
         Text(
-          'Famille',
+          'Lemaire',
           style: TextStyle(
             fontWeight: FontWeight.w800,
             fontSize: 21,

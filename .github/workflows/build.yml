@@ -57,12 +57,12 @@ jobs:
 
       - run: flutter build apk --release --build-number=${{ github.run_number }}
 
-      - run: mv build/app/outputs/flutter-apk/app-release.apk FamilleTV.apk
+      - run: mv build/app/outputs/flutter-apk/app-release.apk LemaireTV.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: android
-          path: FamilleTV.apk
+          path: LemaireTV.apk
 
   ios:
     if: github.event_name != 'pull_request'
@@ -87,12 +87,12 @@ jobs:
         run: |
           mkdir Payload
           cp -R build/ios/iphoneos/Runner.app Payload/
-          zip -qr FamilleTV.ipa Payload
+          zip -qr LemaireTV.ipa Payload
 
       - uses: actions/upload-artifact@v4
         with:
           name: ios
-          path: FamilleTV.ipa
+          path: LemaireTV.ipa
 
   release:
     needs: [android, ios]
@@ -108,9 +108,9 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ github.run_number }}
-          name: Famille TV ${{ github.run_number }}
+          name: Lemaire TV ${{ github.run_number }}
           make_latest: true
           files: |
-            FamilleTV.apk
-            FamilleTV.ipa
+            LemaireTV.apk
+            LemaireTV.ipa
           fail_on_unmatched_files: false
