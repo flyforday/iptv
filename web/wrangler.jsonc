@@ -1,0 +1,7 @@
+// Même déploiement que ../wrangler.jsonc, si Cloudflare est réglé sur le dossier « web ».
+{
+  "name": "iptv",
+  "main": "../worker/index.js",
+  "compatibility_date": "2026-10-01",
+  "assets": { "directory": ".", "binding": "ASSETS" }
+}
