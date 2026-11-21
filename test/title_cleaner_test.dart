@@ -31,14 +31,15 @@ void main() {
         TitleInfo.parse('ELEMENTAIRE (4K)').key);
   });
 
-  test('regroupe les versions', () {
+  test('regroupe les versions d\'un même film identifié', () {
     final names = [
       '|FR| Resident Evil',
       '|FR| Resident Evil (4K)',
       '|FR| Resident Evil (UHD)',
       '|FR| Madden',
     ];
-    expect(groupVersions(names, (n) => n), [
+    expect(groupVersions(names, (n) => n).length, 4);
+    expect(groupVersions(names, (n) => n, identityOf: (_) => '2002'), [
       '|FR| Resident Evil',
       '|FR| Madden',
     ]);

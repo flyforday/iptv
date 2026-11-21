@@ -48,7 +48,11 @@ class CatalogView extends StatelessWidget {
           title: cleanTitle(category.category.categoryName),
           items: shape == PosterShape.channel
               ? category.contentItems
-              : groupVersions(category.contentItems, (i) => i.name),
+              : groupVersions(
+                  category.contentItems,
+                  (i) => i.name,
+                  identityOf: (i) => yearOf(i.seriesStream?.releaseDate),
+                ),
           shape: shape,
           onSeeAll: () => onSeeAll(category),
           itemBuilder: (context, item, width) => PosterCard(

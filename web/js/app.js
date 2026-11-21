@@ -2,7 +2,7 @@
 
 import * as api from './api.js';
 import { profiles, myList, lists, progress } from './store.js';
-import { parseTitle, cleanTitle, groupVersions, qualityRank } from './titles.js';
+import { parseTitle, cleanTitle, groupVersions, qualityTagsIn, labelRank } from './titles.js';
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const app = $('#app');
@@ -131,7 +131,7 @@ async function fillRow(el) {
   const { kind, cat } = el.dataset;
   try {
     const items = await api.streams(kind, cat);
-    const shown = (kind === 'live' ? items : groupVersions(items)).slice(0, 40);
+    const shown = (kind === 'live' ? items : groupVersions(items, undefined, (i) => i.year)).slice(0, 40);
     if (!shown.length) return el.remove();
     $('.strip', el).style.minHeight = '';
     $('.strip', el).innerHTML = shown.map((i) => card(i)).join('');
@@ -252,7 +252,7 @@ function viewAddProfile(first = false) {
       err.textContent =
         ex.message === 'codes'
           ? 'Identifiant ou mot de passe refusé par le serveur.'
-          : 'Impossible de joindre le serveur. Vérifie l’adresse.';
+          : `Impossible de joindre le serveur. Vérifie l’adresse. (Détail : ${ex.message})`;
       err.classList.remove('hidden');
       btn.disabled = false;
       btn.textContent = 'Se connecter';
@@ -292,7 +292,7 @@ async function viewHome() {
   let hero = null;
   if (vodCats[0]) {
     try {
-      const first = groupVersions(await api.streams('vod', vodCats[0].id)).filter((i) => i.img);
+      const first = (await api.streams('vod', vodCats[0].id)).filter((i) => i.img);
       const pool = [...first].sort((a, b) => b.rating - a.rating).slice(0, 12);
       const day = Math.floor(Date.now() / 864e5);
       hero = pool[day % Math.max(pool.length, 1)] || null;
@@ -343,7 +343,7 @@ async function viewCategory(kind, catId) {
   try {
     const [cats, items] = await Promise.all([api.categories(kind), api.streams(kind, catId)]);
     const cat = cats.find((c) => c.id === catId);
-    const shown = kind === 'live' ? items : groupVersions(items);
+    const shown = kind === 'live' ? items : groupVersions(items, undefined, (i) => i.year);
     app.innerHTML = `<a class="back" href="javascript:history.back()">${icon('back')}</a>
       <div style="padding:calc(var(--safe-top) + 64px) 0 calc(var(--safe-bottom) + 24px)">
       <h3 class="section" style="margin-top:0">${esc(cleanTitle(cat?.name || ''))}</h3>
@@ -413,8 +413,9 @@ async function runSearch(text) {
       api.allStreams('live'),
     ]);
     if ($('#q')?.value.trim() !== text) return;
-    const m = groupVersions(vod.filter(match)).slice(0, 60);
-    const s = groupVersions(series.filter(match)).slice(0, 60);
+    const m = (await api.groupFilms(vod.filter(match).slice(0, 120))).slice(0, 60);
+    if ($('#q')?.value.trim() !== text) return;
+    const s = groupVersions(series.filter(match), undefined, (i) => i.year).slice(0, 60);
     const l = live.filter(match).slice(0, 60);
     out.innerHTML =
       m.length + s.length + l.length
@@ -506,26 +507,45 @@ async function viewMovie(id) {
     <div id="related"></div><div style="height:calc(var(--safe-bottom) + 32px)"></div>`;
 
   // Autres versions (4K, UHD…) et rangée « Dans la même catégorie ».
-  api.allStreams('vod').then((all) => {
-    if (location.hash !== `#/film/${encodeURIComponent(id)}`) return;
+  // Même titre ≠ même film : une version n'est proposée que si le
+  // fournisseur confirme que c'est le même film (TMDB, ou année et durée).
+  (async () => {
+    const all = await api.allStreams('vod');
     const key = parseTitle(item.name).key;
-    const versions = all.filter((v) => parseTitle(v.name).key === key);
-    if (versions.length > 1) {
-      versions.sort((a, b) => qualityRank(a.name) - qualityRank(b.name) || a.name.localeCompare(b.name));
-      const el = $('#versions');
-      el.classList.remove('hidden');
-      el.innerHTML = `<span class="lbl">Version</span>${versions
-        .map((v) => {
-          remember(v);
-          const label = parseTitle(v.name).version + (api.safariCanPlay(v) ? '' : ' (VLC)');
-          return `<button class="chip ${v.id === item.id ? 'on' : ''}" data-version="${esc(v.id)}">${esc(label)}</button>`;
-        })
-        .join('')}`;
+    const others = all.filter((v) => v.id !== item.id && parseTitle(v.name).key === key).slice(0, 15);
+    if (!others.length) return;
+    const me = await api.filmIdentity(item.id);
+    if (!me.tmdb && !me.year) return;
+    const ids = await Promise.all(others.map((v) => api.filmIdentity(v.id)));
+    const versions = [item, ...others.filter((_, n) => api.sameFilm(ids[n], me))];
+    if (versions.length < 2 || location.hash !== `#/film/${encodeURIComponent(id)}`) return;
+    const cats = new Map((await api.categories('vod').catch(() => [])).map((c) => [c.id, c.name]));
+    const labels = new Map();
+    for (const v of versions) {
+      let tags = parseTitle(v.name).tags;
+      if (!tags.length) tags = qualityTagsIn(cats.get(v.cat));
+      labels.set(v.id, tags.length ? tags.join(' · ') : 'Standard');
     }
-  }).catch(() => {});
+    versions.sort((a, b) => labelRank(labels.get(a.id)) - labelRank(labels.get(b.id)) || labels.get(a.id).localeCompare(labels.get(b.id)));
+    const count = new Map();
+    for (const v of versions) {
+      const n = (count.get(labels.get(v.id)) || 0) + 1;
+      count.set(labels.get(v.id), n);
+      if (n > 1) labels.set(v.id, `${labels.get(v.id)} ${n}`);
+    }
+    const el = $('#versions');
+    el.classList.remove('hidden');
+    el.innerHTML = `<span class="lbl">Version</span>${versions
+      .map((v) => {
+        remember(v);
+        const label = labels.get(v.id) + (api.safariCanPlay(v) ? '' : ' (VLC)');
+        return `<button class="chip ${v.id === item.id ? 'on' : ''}" data-version="${esc(v.id)}">${esc(label)}</button>`;
+      })
+      .join('')}`;
+  })().catch(() => {});
   if (item.cat) {
     api.streams('vod', item.cat).then((list) => {
-      const rel = groupVersions(list.filter((i) => i.id !== item.id)).slice(0, 20);
+      const rel = list.filter((i) => i.id !== item.id).slice(0, 20);
       const el = $('#related');
       if (el) el.innerHTML = row('Dans la même catégorie', rel);
     }).catch(() => {});

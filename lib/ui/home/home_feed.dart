@@ -191,7 +191,11 @@ class HomeFeedView extends StatelessWidget {
   Widget _categoryRow(CategoryViewModel category) {
     return MediaRow<ContentItem>(
       title: cleanTitle(category.category.categoryName),
-      items: groupVersions(category.contentItems, (i) => i.name),
+      items: groupVersions(
+        category.contentItems,
+        (i) => i.name,
+        identityOf: (i) => yearOf(i.seriesStream?.releaseDate),
+      ),
       onSeeAll: () => actions.openCategory(category),
       itemBuilder: (context, item, width) => PosterCard(
         title: item.name,

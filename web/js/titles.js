@@ -83,15 +83,54 @@ export function parseTitle(raw = '') {
 
 export const cleanTitle = (raw) => parseTitle(raw).title;
 
-/** Garde un seul élément par titre (la première version rencontrée). */
-export function groupVersions(items, nameOf = (i) => i.name) {
+/**
+ * Regroupe les versions d'un même film ou d'une même série : même titre propre
+ * ET même identité fiable (année, identifiant TMDB…). Sans identité, un élément
+ * reste seul, car deux films différents peuvent porter le même nom.
+ */
+export function groupVersions(items, nameOf = (i) => i.name, identityOf = () => '') {
   const seen = new Set();
   return items.filter((i) => {
-    const k = parseTitle(nameOf(i)).key;
+    const id = String(identityOf(i) || '').trim();
+    if (!id) return true;
+    const k = `${parseTitle(nameOf(i)).key}#${id}`;
     if (seen.has(k)) return false;
     seen.add(k);
     return true;
   });
+}
+
+export const yearOf = (d) => (String(d || '').match(/(19|20)\d{2}/) || [])[0] || '';
+
+const CAT_WORDS = [
+  ['4K LIGHT', '4K Light'], ['4K ULTRA HD', 'UHD'], ['ULTRA HD', 'UHD'], ['UHD', 'UHD'],
+  ['2160P', '4K'], ['4K', '4K'], ['1080P', 'Full HD'], ['FHD', 'Full HD'],
+  ['FULL HD', 'Full HD'], ['720P', 'HD'], ['HDR', 'HDR'], ['DOLBY VISION', 'Dolby Vision'],
+  ['3D', '3D'], ['MULTI', 'Multi'], ['VOSTFR', 'VOSTFR'], ['HD', 'HD'], ['SD', 'SD'],
+];
+
+/** Mentions de qualité n'importe où dans un texte (nom de catégorie…). */
+export function qualityTagsIn(text) {
+  let rest = ` ${String(text || '').toUpperCase().replace(/[|[\]()_\-–:]/g, ' ')} `;
+  const out = [];
+  for (const [w, label] of CAT_WORDS) {
+    const re = new RegExp(`\\s${esc(w).replace(/ /g, '\\s+')}\\s`, 'g');
+    if (re.test(rest)) {
+      if (!out.includes(label)) out.push(label);
+      rest = rest.replace(re, ' # ');
+    }
+  }
+  return out;
+}
+
+/** Version standard d'abord, puis par qualité croissante. */
+export function labelRank(label) {
+  const t = label.toUpperCase();
+  if (t.startsWith('STANDARD')) return 0;
+  if (t.includes('UHD')) return 4;
+  if (t.includes('4K')) return 3;
+  if (t.includes('HD')) return 1;
+  return 2;
 }
 
 export function qualityRank(name) {

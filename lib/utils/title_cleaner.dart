@@ -196,20 +196,72 @@ class TitleInfo {
 /// Titre à afficher, sans « |FR| » ni « (4K) ».
 String cleanTitle(String raw) => TitleInfo.parse(raw).title;
 
-/// Garde un seul élément par titre : la première version rencontrée
-/// représente les autres (qualités, langues).
-/// [scopeOf] sépare des groupes qui ne doivent pas se mélanger (ex. un film
-/// et une série du même nom).
+/// Regroupe les versions d'un même film ou d'une même série.
+///
+/// Deux éléments ne sont fusionnés que s'ils ont le même titre propre ET la
+/// même identité fiable ([identityOf] : année de sortie, identifiant TMDB…).
+/// Sans identité (null ou vide), un élément reste toujours seul : deux films
+/// différents peuvent porter exactement le même nom (« Resident Evil » de 2002
+/// et celui de 2025).
 List<T> groupVersions<T>(
   Iterable<T> items,
   String Function(T) nameOf, {
+  String? Function(T)? identityOf,
   String Function(T)? scopeOf,
 }) {
   final seen = <String>{};
   final out = <T>[];
   for (final item in items) {
+    final id = identityOf?.call(item)?.trim() ?? '';
+    if (id.isEmpty) {
+      out.add(item);
+      continue;
+    }
     final scope = scopeOf == null ? '' : '${scopeOf(item)}:';
-    if (seen.add(scope + TitleInfo.parse(nameOf(item)).key)) out.add(item);
+    if (seen.add('$scope${TitleInfo.parse(nameOf(item)).key}#$id')) {
+      out.add(item);
+    }
+  }
+  return out;
+}
+
+/// Année (4 chiffres) trouvée dans une date « 2002-03-15 » ou « 2002 ».
+String? yearOf(String? date) {
+  final m = RegExp(r'(19|20)\d{2}').firstMatch(date ?? '');
+  return m?.group(0);
+}
+
+/// Mentions de qualité trouvées n'importe où dans un texte, par exemple le nom
+/// d'une catégorie « |FR| FILMS 4K LIGHT » → [« 4K Light »].
+List<String> qualityTagsIn(String text) {
+  final upper = ' ${text.toUpperCase().replaceAll(RegExp(r'[|\[\]()_\-–:]'), ' ')} ';
+  const words = [
+    ['4K LIGHT', '4K Light'],
+    ['4K ULTRA HD', 'UHD'],
+    ['ULTRA HD', 'UHD'],
+    ['UHD', 'UHD'],
+    ['2160P', '4K'],
+    ['4K', '4K'],
+    ['1080P', 'Full HD'],
+    ['FHD', 'Full HD'],
+    ['FULL HD', 'Full HD'],
+    ['720P', 'HD'],
+    ['HDR', 'HDR'],
+    ['DOLBY VISION', 'Dolby Vision'],
+    ['3D', '3D'],
+    ['MULTI', 'Multi'],
+    ['VOSTFR', 'VOSTFR'],
+    ['HD', 'HD'],
+    ['SD', 'SD'],
+  ];
+  final out = <String>[];
+  var rest = upper;
+  for (final w in words) {
+    final re = RegExp('\\s${RegExp.escape(w[0]).replaceAll(' ', r'\s+')}\\s');
+    if (re.hasMatch(rest)) {
+      if (!out.contains(w[1])) out.add(w[1]);
+      rest = rest.replaceAll(re, ' # ');
+    }
   }
   return out;
 }
