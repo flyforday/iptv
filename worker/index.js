@@ -1,6 +1,6 @@
 // Lemaire TV sur Cloudflare Workers : les fichiers de web/ sont servis tels
 // quels, et /p/… passe par le relais vers le fournisseur IPTV.
-import { relay } from './relay.js';
+import { relay, diag } from './relay.js';
 
 export default {
   async fetch(request, env) {
@@ -11,6 +11,8 @@ export default {
       });
       return relay(request, parts);
     }
+    const d = url.pathname.match(/^\/diag\/(https?)\/([A-Za-z0-9.-]+(?::\d+)?)\/?$/);
+    if (d) return diag(d[1], d[2]);
     return env.ASSETS.fetch(request);
   },
 };

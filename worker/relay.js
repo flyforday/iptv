@@ -70,9 +70,12 @@ export async function relay(request, parts) {
   }
 
   const out = new Headers();
+  // Si le fournisseur compresse (gzip), le corps est décompressé ici : la
+  // longueur annoncée ne correspond plus, et Safari coupe la connexion.
+  const compressed = !!upstream.headers.get('content-encoding');
   for (const h of [
     'content-type',
-    'content-length',
+    ...(compressed ? [] : ['content-length']),
     'content-range',
     'accept-ranges',
     'last-modified',
@@ -115,4 +118,29 @@ export async function relay(request, parts) {
   }
 
   return new Response(upstream.body, { status: upstream.status, headers: out });
+}
+
+/**
+ * Diagnostic sans identifiants : /diag/http/serveur.net → ce que le relais
+ * obtient en appelant player_api.php sans codes (statut, en-têtes, début).
+ */
+export async function diag(scheme, host) {
+  const out = { target: `${scheme}://${host}/player_api.php` };
+  try {
+    const r = await fetch(out.target, {
+      headers: { 'user-agent': 'VLC/3.0.20 LibVLC/3.0.20' },
+      redirect: 'follow',
+    });
+    out.status = r.status;
+    out.finalUrl = r.url;
+    out.headers = Object.fromEntries(
+      ['content-type', 'content-encoding', 'content-length', 'server', 'location'].map((h) => [h, r.headers.get(h)]),
+    );
+    out.body = (await r.text()).slice(0, 300);
+  } catch (e) {
+    out.error = String((e && e.message) || e);
+  }
+  return new Response(JSON.stringify(out, null, 2), {
+    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+  });
 }
