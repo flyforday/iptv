@@ -30,3 +30,16 @@ flutter run
 ```
 
 Version de Flutter utilisée : 3.35.7 (voir `.github/workflows/build.yml`).
+
+## Version iPhone (web, gratuite)
+
+Le dossier `web/` contient une version web de Lemaire TV pour iPhone : on
+l'ouvre dans Safari puis « Partager > Sur l'écran d'accueil ». Elle est mise
+en ligne gratuitement par Cloudflare Pages, reliée à ce dépôt :
+
+- Cloudflare > Workers & Pages > Créer > Pages > Connecter à Git > `flyforday/iptv`
+- Branche de production : `main`, commande de build : aucune,
+  répertoire racine : `web`, répertoire de sortie : `.`
+
+`web/functions/p/` est le relais qui permet à Safari de lire les flux « http »
+du fournisseur. Les films en MKV/AVI s'ouvrent dans l'app VLC (gratuite).
