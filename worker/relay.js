@@ -61,9 +61,12 @@ export async function relay(request, parts) {
       method: request.method,
       headers,
       redirect: 'follow',
+      // Les vidéos peuvent être longues à démarrer, pas les réponses de l'API.
+      signal: AbortSignal.timeout(/\.php$/.test(rawPath) ? 20000 : 60000),
     });
   } catch (e) {
-    return new Response(`Serveur IPTV injoignable depuis le relais (${e && e.message ? e.message : e})`, {
+    const why = e && e.name === 'TimeoutError' ? 'le serveur ne répond pas (délai dépassé)' : (e && e.message) || String(e);
+    return new Response(`Relais : serveur IPTV injoignable (${why})`, {
       status: 502,
       headers: { 'access-control-allow-origin': '*' },
     });
@@ -115,6 +118,23 @@ export async function relay(request, parts) {
     out.delete('content-length');
     out.set('content-type', 'application/vnd.apple.mpegurl');
     return new Response(rewritten, { status: upstream.status, headers: out });
+  }
+
+  if (/\.php$/.test(rawPath) && request.method === 'GET') {
+    // Réponses de l'API : lues en entier ici, pour qu'une coupure du
+    // fournisseur donne un message clair au lieu d'une erreur réseau.
+    let text;
+    try {
+      text = await upstream.text();
+    } catch (e) {
+      return new Response(`Relais : réponse du serveur IPTV interrompue (${(e && e.message) || e})`, {
+        status: 502,
+        headers: { 'access-control-allow-origin': '*' },
+      });
+    }
+    out.delete('content-length');
+    out.set('x-relais-url-finale', new URL(upstream.url || target).host);
+    return new Response(text, { status: upstream.status, headers: out });
   }
 
   return new Response(upstream.body, { status: upstream.status, headers: out });
