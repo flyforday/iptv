@@ -184,3 +184,60 @@ export async function diag(scheme, host) {
     headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
   });
 }
+
+/**
+ * Diagnostic avec les codes de l'utilisateur, sans jamais renvoyer leur
+ * valeur : statuts, en-têtes et forme de la réponse (clés JSON seulement).
+ */
+export async function diagCodes(scheme, host, search) {
+  const out = { etapes: [] };
+  const hide = (u) => String(u).replace(/\?.*$/, '?…');
+  let url = `${scheme}://${host}/player_api.php${search}`;
+  for (let i = 0; i < 6 && url; i++) {
+    const t0 = Date.now();
+    try {
+      const r = await fetch(url, {
+        headers: { 'user-agent': 'VLC/3.0.20 LibVLC/3.0.20' },
+        redirect: 'manual',
+        signal: AbortSignal.timeout(25000),
+      });
+      const loc = r.headers.get('location');
+      const step = { url: hide(url), status: r.status, ms: Date.now() - t0 };
+      if (loc) {
+        step.vers = hide(new URL(loc, url));
+        url = new URL(loc, url).toString();
+      } else {
+        url = null;
+        step.entetes = Object.fromEntries([...r.headers].filter(([k]) => !/cookie/i.test(k)));
+        let body = '';
+        try {
+          body = await r.text();
+          step.taille = body.length;
+        } catch (e) {
+          step.erreurCorps = String((e && e.message) || e);
+        }
+        try {
+          const j = JSON.parse(body);
+          step.json = Object.fromEntries(
+            Object.entries(j).map(([k, v]) => [k, v && typeof v === 'object' ? Object.keys(v) : typeof v]),
+          );
+          if (j.user_info) {
+            step.auth = j.user_info.auth;
+            step.statut = j.user_info.status;
+            step.maxConnexions = j.user_info.max_connections;
+            step.connexionsActives = j.user_info.active_cons;
+          }
+        } catch {
+          step.debut = body.slice(0, 120).replace(/[A-Za-z0-9]{8,}/g, '•••');
+        }
+      }
+      out.etapes.push(step);
+    } catch (e) {
+      out.etapes.push({ url: hide(url), erreur: String((e && e.message) || e), ms: Date.now() - t0 });
+      url = null;
+    }
+  }
+  return new Response(JSON.stringify(out, null, 2), {
+    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+  });
+}
