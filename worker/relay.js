@@ -72,6 +72,15 @@ export async function relay(request, parts) {
     });
   }
 
+  // 407 (« authentification proxy requise ») fait échouer Safari sans
+  // message : on le transforme en erreur lisible.
+  if (upstream.status === 407) {
+    return new Response(
+      'Le fournisseur IPTV refuse la connexion passant par le relais (code 407 : il bloque les adresses des serveurs).',
+      { status: 502, headers: { 'access-control-allow-origin': '*', 'x-relais-erreur': '407' } },
+    );
+  }
+
   const out = new Headers();
   // Si le fournisseur compresse (gzip), le corps est décompressé ici : la
   // longueur annoncée ne correspond plus, et Safari coupe la connexion.
@@ -189,7 +198,23 @@ export async function diag(scheme, host) {
  * Diagnostic avec les codes de l'utilisateur, sans jamais renvoyer leur
  * valeur : statuts, en-têtes et forme de la réponse (clés JSON seulement).
  */
-export async function diagCodes(scheme, host, search) {
+export async function diagCodes(scheme, host, search, ua) {
+  const agents = {
+    vlc: 'VLC/3.0.20 LibVLC/3.0.20',
+    android: 'Dart/3.9 (dart:io)',
+    safari: ua || 'Mozilla/5.0',
+    aucun: '',
+  };
+  const res = {};
+  for (const [nom, agent] of Object.entries(agents)) {
+    res[nom] = await diagOnce(scheme, host, search, agent);
+  }
+  return new Response(JSON.stringify(res, null, 1), {
+    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
+  });
+}
+
+async function diagOnce(scheme, host, search, agent) {
   const out = { etapes: [] };
   const hide = (u) => String(u).replace(/\?.*$/, '?…');
   let url = `${scheme}://${host}/player_api.php${search}`;
@@ -197,7 +222,7 @@ export async function diagCodes(scheme, host, search) {
     const t0 = Date.now();
     try {
       const r = await fetch(url, {
-        headers: { 'user-agent': 'VLC/3.0.20 LibVLC/3.0.20' },
+        headers: agent ? { 'user-agent': agent } : {},
         redirect: 'manual',
         signal: AbortSignal.timeout(25000),
       });
@@ -208,7 +233,7 @@ export async function diagCodes(scheme, host, search) {
         url = new URL(loc, url).toString();
       } else {
         url = null;
-        step.entetes = Object.fromEntries([...r.headers].filter(([k]) => !/cookie/i.test(k)));
+        step.acao = r.headers.get('access-control-allow-origin');
         let body = '';
         try {
           body = await r.text();
@@ -237,7 +262,6 @@ export async function diagCodes(scheme, host, search) {
       url = null;
     }
   }
-  return new Response(JSON.stringify(out, null, 2), {
-    headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
-  });
+  const last = out.etapes[out.etapes.length - 1] || {};
+  return { status: last.status, erreur: last.erreur, auth: last.auth, statut: last.statut, max: last.maxConnexions, actives: last.connexionsActives, acao: last.acao, taille: last.taille, debut: last.debut };
 }
