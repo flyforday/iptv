@@ -45,10 +45,13 @@ async function relay(request, parts) {
     upstream = await fetch(target, {
       method: request.method,
       headers,
-      redirect: "follow"
+      redirect: "follow",
+      // Les vidéos peuvent être longues à démarrer, pas les réponses de l'API.
+      signal: AbortSignal.timeout(/\.php$/.test(rawPath) ? 2e4 : 6e4)
     });
   } catch (e) {
-    return new Response(`Serveur IPTV injoignable depuis le relais (${e && e.message ? e.message : e})`, {
+    const why = e && e.name === "TimeoutError" ? "le serveur ne r\xE9pond pas (d\xE9lai d\xE9pass\xE9)" : e && e.message || String(e);
+    return new Response(`Relais : serveur IPTV injoignable (${why})`, {
       status: 502,
       headers: { "access-control-allow-origin": "*" }
     });
@@ -88,6 +91,20 @@ async function relay(request, parts) {
     out.delete("content-length");
     out.set("content-type", "application/vnd.apple.mpegurl");
     return new Response(rewritten, { status: upstream.status, headers: out });
+  }
+  if (/\.php$/.test(rawPath) && request.method === "GET") {
+    let text;
+    try {
+      text = await upstream.text();
+    } catch (e) {
+      return new Response(`Relais : r\xE9ponse du serveur IPTV interrompue (${e && e.message || e})`, {
+        status: 502,
+        headers: { "access-control-allow-origin": "*" }
+      });
+    }
+    out.delete("content-length");
+    out.set("x-relais-url-finale", new URL(upstream.url || target).host);
+    return new Response(text, { status: upstream.status, headers: out });
   }
   return new Response(upstream.body, { status: upstream.status, headers: out });
 }
@@ -181,7 +198,7 @@ var jsonError = /* @__PURE__ */ __name(async (request, env, _ctx, middlewareCtx)
 }, "jsonError");
 var middleware_miniflare3_json_error_default = jsonError;
 
-// .wrangler/tmp/bundle-vVOt2h/middleware-insertion-facade.js
+// .wrangler/tmp/bundle-HP8olS/middleware-insertion-facade.js
 var __INTERNAL_WRANGLER_MIDDLEWARE__ = [
   middleware_ensure_req_body_drained_default,
   middleware_miniflare3_json_error_default
@@ -213,7 +230,7 @@ function __facade_invoke__(request, env, ctx, dispatch, finalMiddleware) {
 }
 __name(__facade_invoke__, "__facade_invoke__");
 
-// .wrangler/tmp/bundle-vVOt2h/middleware-loader.entry.ts
+// .wrangler/tmp/bundle-HP8olS/middleware-loader.entry.ts
 var __Facade_ScheduledController__ = class ___Facade_ScheduledController__ {
   constructor(scheduledTime, cron, noRetry) {
     this.scheduledTime = scheduledTime;

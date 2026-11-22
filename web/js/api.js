@@ -52,11 +52,16 @@ async function call(p, action, extra = {}) {
   for (const [k, v] of Object.entries(extra)) q.set(k, v);
   let res;
   try {
-    res = await fetch(relay(`${p.server}/player_api.php?${q}`));
-  } catch {
-    throw new Error('réseau : pas de connexion internet ?');
+    res = await fetch(relay(`${p.server}/player_api.php?${q}`), { cache: 'no-store' });
+  } catch (e) {
+    throw new Error(`réseau (${(e && e.message) || e}) : le relais n'a pas répondu`);
   }
-  const text = await res.text();
+  let text;
+  try {
+    text = await res.text();
+  } catch (e) {
+    throw new Error(`réponse coupée (${(e && e.message) || e}), HTTP ${res.status}`);
+  }
   const brief = () => text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
   if (!res.ok) throw new Error(`HTTP ${res.status}${text ? ' : ' + brief() : ''}`);
   try {
