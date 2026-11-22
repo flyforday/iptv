@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Test de connexion</title>
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; padding: 20px 16px; background: #0b0b0f; color: #f4f4f6; font: 16px/1.45 -apple-system, system-ui, sans-serif; }
+  h1 { font-size: 22px; margin: 0 0 6px; }
+  p { color: #b9b9c3; margin: 0 0 18px; }
+  ol { padding-left: 22px; margin: 0; }
+  li { margin: 0 0 14px; }
+  b { display: block; }
+  .ok { color: #5fd38d; }
+  .ko { color: #ff6b8b; }
+  code { font-size: 13px; color: #b9b9c3; word-break: break-all; }
+</style>
+</head>
+<body>
+<h1>Test de connexion Lemaire TV</h1>
+<p>Fais une capture d'écran de cette page une fois les 6 lignes remplies. Aucun code n'est utilisé ici.</p>
+<ol id="out"></ol>
+<script>
+const host = (new URLSearchParams(location.search).get('serveur') || 'playvippro.net').replace(/^https?:\/\//, '').replace(/\/.*$/, '');
+const tests = [
+  ['Page du site', '/manifest.webmanifest'],
+  ['Relais vers un site de test', '/p/http/portquiz.net/a.jpg'],
+  ['Diagnostic du relais', `/diag/http/${host}`],
+  ['Relais vers ton fournisseur', `/p/http/${host}/player_api.php`],
+  ['Relais avec de faux codes', `/p/http/${host}/player_api.php?username=test&password=test`],
+  ['Faux codes, autre forme', `/p/http/${host}/player_api.php?action=get_vod_categories&username=test&password=test`],
+];
+const out = document.getElementById('out');
+(async () => {
+  for (const [name, url] of tests) {
+    const li = document.createElement('li');
+    li.innerHTML = `<b>${name}</b><span>…</span><br><code>${url}</code>`;
+    out.appendChild(li);
+    const span = li.querySelector('span');
+    const t0 = Date.now();
+    try {
+      const r = await fetch(url, { cache: 'no-store' });
+      const txt = (await r.text()).replace(/\s+/g, ' ').slice(0, 90);
+      span.className = 'ok';
+      span.textContent = `réponse ${r.status} en ${Date.now() - t0} ms ${txt ? '· ' + txt : ''}`;
+    } catch (e) {
+      span.className = 'ko';
+      span.textContent = `ÉCHEC après ${Date.now() - t0} ms : ${e && e.message ? e.message : e}`;
+    }
+  }
+})();
+</script>
+</body>
+</html>
