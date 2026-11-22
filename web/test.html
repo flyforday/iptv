@@ -22,6 +22,14 @@
 <h1>Test de connexion Lemaire TV</h1>
 <p>Fais une capture d'écran de cette page une fois les 6 lignes remplies. Aucun code n'est utilisé ici.</p>
 <ol id="out"></ol>
+<h1 style="margin-top:28px">Test avec tes codes</h1>
+<p>Tes codes restent sur cet appareil : la page ne les affiche pas et ne les envoie qu'à ton fournisseur, via le relais.</p>
+<form id="f" style="display:grid;gap:10px;max-width:420px">
+  <input name="u" placeholder="Identifiant" autocomplete="off" autocapitalize="off" style="font-size:16px;padding:12px;border-radius:10px;border:1px solid #444;background:#16161c;color:#fff">
+  <input name="p" type="password" placeholder="Mot de passe" style="font-size:16px;padding:12px;border-radius:10px;border:1px solid #444;background:#16161c;color:#fff">
+  <button style="font-size:16px;padding:12px;border-radius:10px;border:0;background:#ff2d87;color:#fff;font-weight:600">Tester</button>
+</form>
+<ol id="out2" style="margin-top:16px"></ol>
 <script>
 const host = (new URLSearchParams(location.search).get('serveur') || 'playvippro.net').replace(/^https?:\/\//, '').replace(/\/.*$/, '');
 const tests = [
@@ -51,6 +59,38 @@ const out = document.getElementById('out');
     }
   }
 })();
+
+document.getElementById('f').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const f = ev.target;
+  const q = new URLSearchParams({ username: f.u.value.trim(), password: f.p.value });
+  const out2 = document.getElementById('out2');
+  out2.innerHTML = '';
+  const add = (name) => { const li = document.createElement('li'); li.innerHTML = `<b>${name}</b><span>…</span>`; out2.appendChild(li); return li.querySelector('span'); };
+  let span = add('Comme l\'app (relais)');
+  let t0 = Date.now();
+  try {
+    const r = await fetch(`/p/http/${host}/player_api.php?${q}`, { cache: 'no-store' });
+    const txt = await r.text();
+    span.className = 'ok';
+    span.textContent = `réponse ${r.status} en ${Date.now() - t0} ms, ${txt.length} caractères, type ${r.headers.get('content-type')}`;
+  } catch (e) {
+    span.className = 'ko';
+    span.textContent = `ÉCHEC après ${Date.now() - t0} ms : ${e && e.message ? e.message : e}`;
+  }
+  span = add('Vu par le relais');
+  t0 = Date.now();
+  try {
+    const r = await fetch(`/diagcodes/http/${host}?${q}`, { cache: 'no-store' });
+    span.className = 'ok';
+    span.style.whiteSpace = 'pre-wrap';
+    span.style.fontSize = '13px';
+    span.textContent = await r.text();
+  } catch (e) {
+    span.className = 'ko';
+    span.textContent = `ÉCHEC après ${Date.now() - t0} ms : ${e && e.message ? e.message : e}`;
+  }
+});
 </script>
 </body>
 </html>
