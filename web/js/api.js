@@ -51,19 +51,21 @@ async function call(p, action, extra = {}) {
   if (action) q.set('action', action);
   for (const [k, v] of Object.entries(extra)) q.set(k, v);
   let res;
+  const t0 = Date.now();
+  const secs = () => `${((Date.now() - t0) / 1000).toFixed(1)} s`;
   try {
     res = await fetch(relay(`${p.server}/player_api.php?${q}`), { cache: 'no-store' });
   } catch (e) {
-    throw new Error(`réseau (${(e && e.message) || e}) : le relais n'a pas répondu`);
+    throw new Error(`réseau (${(e && e.message) || e}) après ${secs()} : le relais n'a pas répondu`);
   }
   let text;
   try {
     text = await res.text();
   } catch (e) {
-    throw new Error(`réponse coupée (${(e && e.message) || e}), HTTP ${res.status}`);
+    throw new Error(`réponse coupée (${(e && e.message) || e}) après ${secs()}, HTTP ${res.status}`);
   }
   const brief = () => text.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 120);
-  if (!res.ok) throw new Error(`HTTP ${res.status}${text ? ' : ' + brief() : ''}`);
+  if (!res.ok) throw new Error(`HTTP ${res.status} après ${secs()}${text ? ' : ' + brief() : ''}`);
   try {
     return JSON.parse(text);
   } catch {
