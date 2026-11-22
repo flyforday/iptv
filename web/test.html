@@ -78,6 +78,19 @@ document.getElementById('f').addEventListener('submit', async (ev) => {
     span.className = 'ko';
     span.textContent = `ÉCHEC après ${Date.now() - t0} ms : ${e && e.message ? e.message : e}`;
   }
+  span = add(`Direct depuis l'appareil (page en ${location.protocol.replace(':', '')})`);
+  t0 = Date.now();
+  try {
+    const r = await fetch(`http://${host}/player_api.php?${q}`, { cache: 'no-store' });
+    const txt = await r.text();
+    let auth = '';
+    try { auth = ' · auth ' + JSON.parse(txt).user_info.auth; } catch {}
+    span.className = 'ok';
+    span.textContent = `réponse ${r.status} en ${Date.now() - t0} ms, ${txt.length} caractères${auth}`;
+  } catch (e) {
+    span.className = 'ko';
+    span.textContent = `ÉCHEC après ${Date.now() - t0} ms : ${e && e.message ? e.message : e}`;
+  }
   span = add('Vu par le relais');
   t0 = Date.now();
   try {

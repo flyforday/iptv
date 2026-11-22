@@ -14,7 +14,7 @@ export default {
     const d = url.pathname.match(/^\/diag\/(https?)\/([A-Za-z0-9.-]+(?::\d+)?)\/?$/);
     if (d) return diag(d[1], d[2]);
     const dc = url.pathname.match(/^\/diagcodes\/(https?)\/([A-Za-z0-9.-]+(?::\d+)?)\/?$/);
-    if (dc) return diagCodes(dc[1], dc[2], url.search);
+    if (dc) return diagCodes(dc[1], dc[2], url.search, request.headers.get('user-agent'));
     return env.ASSETS.fetch(request);
   },
 };
