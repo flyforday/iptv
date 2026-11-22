@@ -62,7 +62,7 @@ export async function relay(request, parts) {
       headers,
       redirect: 'follow',
       // Les vidéos peuvent être longues à démarrer, pas les réponses de l'API.
-      signal: AbortSignal.timeout(/\.php$/.test(rawPath) ? 20000 : 60000),
+      signal: AbortSignal.timeout(/\.php$/.test(rawPath) ? 45000 : 60000),
     });
   } catch (e) {
     const why = e && e.name === 'TimeoutError' ? 'le serveur ne répond pas (délai dépassé)' : (e && e.message) || String(e);
@@ -145,7 +145,26 @@ export async function relay(request, parts) {
  * obtient en appelant player_api.php sans codes (statut, en-têtes, début).
  */
 export async function diag(scheme, host) {
-  const out = { target: `${scheme}://${host}/player_api.php` };
+  const out = { target: `${scheme}://${host}/player_api.php`, etapes: [] };
+  // Chaque redirection, chronométrée, pour voir laquelle est lente.
+  let url = out.target;
+  for (let i = 0; i < 6 && url; i++) {
+    const t0 = Date.now();
+    try {
+      const r = await fetch(url, {
+        headers: { 'user-agent': 'VLC/3.0.20 LibVLC/3.0.20' },
+        redirect: 'manual',
+        signal: AbortSignal.timeout(25000),
+      });
+      const loc = r.headers.get('location');
+      out.etapes.push({ url: url.replace(/\?.*$/, ''), status: r.status, ms: Date.now() - t0, vers: loc && loc.replace(/\?.*$/, '') });
+      url = loc ? new URL(loc, url).toString() : null;
+    } catch (e) {
+      out.etapes.push({ url, erreur: String((e && e.message) || e), ms: Date.now() - t0 });
+      url = null;
+    }
+  }
+  const t0 = Date.now();
   try {
     const r = await fetch(out.target, {
       headers: { 'user-agent': 'VLC/3.0.20 LibVLC/3.0.20' },
@@ -157,6 +176,7 @@ export async function diag(scheme, host) {
       ['content-type', 'content-encoding', 'content-length', 'server', 'location'].map((h) => [h, r.headers.get(h)]),
     );
     out.body = (await r.text()).slice(0, 300);
+    out.msTotal = Date.now() - t0;
   } catch (e) {
     out.error = String((e && e.message) || e);
   }
